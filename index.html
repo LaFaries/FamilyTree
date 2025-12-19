@@ -7,7 +7,6 @@
 
   <style>
     :root{
-      /* Caribbean palette (sand + ocean teal + coral + deep plum) */
       --sand:#F6E7CF;
       --cream:#FFF7E8;
       --ocean:#0B7285;
@@ -77,7 +76,7 @@
       display:flex; gap:6px; align-items:center;
     }
 
-    select, input[type="file"], input[type="text"], input[type="email"], button{
+    select, input[type="file"], input[type="text"], button{
       border-radius: 12px;
       border: 1px solid rgba(11,114,133,.24);
       background: rgba(255,255,255,.92);
@@ -172,7 +171,6 @@
         linear-gradient(180deg, rgba(246,231,207,.65), rgba(255,247,232,.95));
     }
 
-    /* Tooltip */
     .tooltip{
       position: absolute;
       pointer-events: none;
@@ -191,7 +189,6 @@
     }
     .tooltip strong{ color: #ffe1d6; }
 
-    /* Node styling (SVG) */
     .node-rect{
       fill: rgba(255,255,255,.92);
       stroke: var(--nodeStroke);
@@ -203,7 +200,6 @@
     .node-meta{ font-size: 11px; fill: rgba(16,42,46,.70); }
     .link{ fill: none; stroke: var(--link); stroke-width: 2; }
 
-    /* Label helper (tooltip icon) */
     .help{
       width: 16px; height: 16px; border-radius: 999px;
       display:inline-flex; align-items:center; justify-content:center;
@@ -214,7 +210,6 @@
       user-select:none;
     }
 
-    /* Walkthrough */
     .walkthrough{
       margin-top: 12px;
       border-radius: 16px;
@@ -247,13 +242,6 @@
     .wtText b{ color: var(--plum); }
     .wtHint{ font-size:12px; color: var(--muted); margin-top:6px; }
     @media (max-width: 980px){ .wtSteps{ grid-template-columns: 1fr; } }
-
-    /* Auth bar */
-    .authbar{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      margin-bottom: 12px;
-    }
-    .authbar small{ color: var(--muted); }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -263,15 +251,6 @@
 
 <body>
   <div class="wrap">
-
-    <!-- AUTH BAR (Email magic link) -->
-    <div class="authbar">
-      <input id="loginEmail" type="email" placeholder="Enter admin email" />
-      <button class="btnGhost" id="loginBtn">Log in</button>
-      <button class="btnGhost" id="logoutBtn">Log out</button>
-      <small id="authStatus">Not signed in</small>
-    </div>
-
     <header>
       <div class="topbar">
         <div class="brand">
@@ -295,12 +274,12 @@
           </div>
 
           <div class="control">
-            <label data-tip="Upload a GEDCOM file from your computer. You can save it to your device, or (admin only) upload it to the shared cloud.">
+            <label data-tip="Upload a GEDCOM file from your computer. You can save it to your device, or upload it to the shared cloud (password protected).">
               Upload a GEDCOM <span class="help" data-tip="GEDCOM is the standard family-tree file format (.ged).">?</span>
             </label>
             <input id="gedFile" type="file" accept=".ged,.gedcom,.txt" />
             <div class="row">
-              <button class="btnPrimary" id="uploadSharedBtn" disabled data-tip="Admin-only: updates the shared cloud tree for everyone.">Update Shared Tree (Admin)</button>
+              <button class="btnPrimary" id="uploadSharedBtn" disabled data-tip="Uploads the shared cloud tree for everyone (requires password prompt).">Update Shared Tree</button>
               <button class="btnGhost" id="saveLocalBtn" disabled data-tip="Saves your current GEDCOM to this device so you do not need to re-upload next time.">Save to My Device</button>
             </div>
           </div>
@@ -450,58 +429,8 @@
 
   <div class="tooltip" id="tooltip"></div>
 
-  <!-- Supabase (ONLY ONCE). IMPORTANT: use the "anon public" key that starts with eyJ... -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-    // ✅ Update these from Supabase Dashboard → Project Settings → API
-    const SUPABASE_URL = "https://jpenrpbpeuorkscumqba.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwZW5ycGJwZXVvcmtzY3VtcWJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwODA4NDcsImV4cCI6MjA4MTY1Njg0N30.XLvYHlCoXbMGDCFBJV0hQS0wPPZJ4ft-4yD5gHtR76Y"; // should start with eyJ...
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Expose globally for other scripts / console
-    window.supabase = supabase;
-
-    const emailEl = document.getElementById("loginEmail");
-    const statusEl = document.getElementById("authStatus");
-
-    async function refreshAuthStatus(){
-      const { data } = await supabase.auth.getSession();
-      const user = data?.session?.user;
-      statusEl.textContent = user ? `Signed in as: ${user.email}` : "Not signed in";
-    }
-
-    async function login(){
-      const email = (emailEl.value || "").trim();
-      if(!email) return alert("Enter your email first.");
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.href }
-      });
-
-      if(error) alert("Login error: " + error.message);
-      else alert("Check your email for the login link.");
-    }
-
-    async function logout(){
-      const { error } = await supabase.auth.signOut();
-      if(error) alert("Logout error: " + error.message);
-      else alert("Logged out.");
-      refreshAuthStatus();
-    }
-
-    document.getElementById("loginBtn").addEventListener("click", login);
-    document.getElementById("logoutBtn").addEventListener("click", logout);
-
-    supabase.auth.onAuthStateChange(() => refreshAuthStatus());
-    refreshAuthStatus();
-  </script>
-
-  <!-- App logic -->
   <script>
-    // Netlify Functions endpoints (cloud share)
+    // Cloud endpoints (Netlify Functions)
     const CLOUD_GET_URL = "/.netlify/functions/getTree";
     const CLOUD_UPLOAD_URL = "/.netlify/functions/uploadTree";
 
@@ -510,7 +439,7 @@
     const LOCAL_KEY_UI   = "ift:ui:v2";
     const LOCAL_KEY_WT   = "ift:walkthroughDismissed:v1";
 
-    // Tooltip for UI tips
+    // Tooltip (UI help)
     const uiTip = document.getElementById("tooltip");
     function escapeHtml(str){
       return String(str).replace(/[&<>"']/g, s => ({
@@ -531,9 +460,22 @@
       uiTip.style.transform = "translateY(-6px)";
     }
     document.addEventListener("mouseover", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) showUiTip(e); });
-    document.addEventListener("mousemove", (e)=>{ if(uiTip.style.opacity==="1"){ uiTip.style.left=(e.pageX+14)+"px"; uiTip.style.top=(e.pageY+14)+"px"; }});
+    document.addEventListener("mousemove", (e)=>{ if(uiTip.style.opacity==="1") { uiTip.style.left=(e.pageX+14)+"px"; uiTip.style.top=(e.pageY+14)+"px"; } });
     document.addEventListener("mouseout", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) hideUiTip(); });
 
+    // ----------------------------------------------------------------------------
+    // FUTURE ADMIN LOGIN (DISABLED ON PURPOSE)
+    // ----------------------------------------------------------------------------
+    // If you ever want Supabase login later, keep it server-side + RLS.
+    // For now, we removed the UI and do not initialize Supabase in the browser.
+    //
+    // Example future plan:
+    //  - Use supabase.auth on a separate /admin page
+    //  - Store session, set is_admin in profiles
+    //  - Netlify functions validate JWT and allow uploads
+    // ----------------------------------------------------------------------------
+
+    // GEDCOM parsing
     function parseGedcom(text){
       const lines = text.split(/\r?\n/);
       const individuals = new Map();
@@ -611,7 +553,6 @@
     }
 
     const norm = (s)=>String(s||"").trim().toLowerCase();
-
     function surnameMatches(person, filter){
       const wantRaw = norm(filter);
       if(!wantRaw) return true;
@@ -706,7 +647,7 @@
       return buildNode(rootId, 1);
     }
 
-    // State
+    // App state
     let GED = { individuals:new Map(), families:new Map() };
     let currentRoot = "";
     let zoomBehavior = null;
@@ -720,9 +661,41 @@
     }
     function clearSvg(){ svg.selectAll("*").remove(); }
 
+    function setCloudStatus(label){
+      document.getElementById("cloudStatus").innerHTML =
+        `Cloud: <span style="color:#1f7a3b;font-weight:900">${escapeHtml(label)}</span>`;
+    }
+    function setCloudStatusError(label){
+      document.getElementById("cloudStatus").innerHTML =
+        `Cloud: <span style="color:#8a1e2b;font-weight:900">${escapeHtml(label)}</span>`;
+    }
+
+    function showTooltip(event, d){
+      if(event.target?.hasAttribute?.("data-tip")) return;
+
+      const p = d.data;
+      const lines = [
+        `<strong>${escapeHtml(p.name || "Unknown")}</strong>`,
+        p.surname ? `Surname: ${escapeHtml(p.surname)}` : "",
+        (p.birt?.date || p.birt?.place) ? `Birth: ${escapeHtml([p.birt?.date, p.birt?.place].filter(Boolean).join(" — "))}` : "",
+        (p.deat?.date || p.deat?.place) ? `Death: ${escapeHtml([p.deat?.date, p.deat?.place].filter(Boolean).join(" — "))}` : "",
+        `ID: ${escapeHtml(p.id || "")}`
+      ].filter(Boolean);
+
+      tooltip.innerHTML = lines.join("<br/>");
+      tooltip.style.left = (event.pageX + 14) + "px";
+      tooltip.style.top  = (event.pageY + 14) + "px";
+      tooltip.style.opacity = "1";
+      tooltip.style.transform = "translateY(0)";
+    }
+    function hideTooltip(){
+      tooltip.style.opacity = "0";
+      tooltip.style.transform = "translateY(-6px)";
+    }
+
     // DOM refs
-    const treeTitle = document.getElementById("treeTitle");
     const gedFile = document.getElementById("gedFile");
+    const treeTitle = document.getElementById("treeTitle");
     const rootSelect = document.getElementById("rootSelect");
     const depthSelect = document.getElementById("depthSelect");
     const renderBtn = document.getElementById("renderBtn");
@@ -739,13 +712,13 @@
     const loadSharedBtn = document.getElementById("loadSharedBtn");
     const loadLocalBtn = document.getElementById("loadLocalBtn");
     const clearLocalBtn = document.getElementById("clearLocalBtn");
+
     const exportPngBtn = document.getElementById("exportPngBtn");
     const exportSvgBtn = document.getElementById("exportSvgBtn");
     const exportPdfBtn = document.getElementById("exportPdfBtn");
     const exportJsonBtn = document.getElementById("exportJsonBtn");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
 
-    // Walkthrough
     const walkthrough = document.getElementById("walkthrough");
     const dismissWalkthroughBtn = document.getElementById("dismissWalkthroughBtn");
     const showWalkthroughBtn = document.getElementById("showWalkthroughBtn");
@@ -758,7 +731,7 @@
       localStorage.setItem(LOCAL_KEY_WT, "1");
       walkthrough.classList.remove("show");
     });
-    showWalkthroughBtn.addEventListener("click", ()=>{ walkthrough.classList.remove("show"); });
+    showWalkthroughBtn.addEventListener("click", ()=>{ walkthrough.classList.add("show"); });
 
     function enableControls(){
       depthSelect.disabled = false;
@@ -779,6 +752,21 @@
     function setSurnameStatusLabel(){
       const val = surnameSelect.value;
       document.getElementById("surnameStatus").textContent = val ? val : "All";
+    }
+    function updateModeLabel(){
+      document.getElementById("modeStatus").textContent = (modeSelect.value === "anc") ? "Ancestors" : "Descendants";
+    }
+
+    function setStatusCounts(){
+      document.getElementById("peopleCount").textContent = GED.individuals.size;
+      document.getElementById("familyCount").textContent = GED.families.size;
+
+      const hasSome = GED.individuals.size > 0;
+      exportPngBtn.disabled = !hasSome;
+      exportSvgBtn.disabled = !hasSome;
+      exportPdfBtn.disabled = !hasSome;
+      exportJsonBtn.disabled = !hasSome;
+      exportCsvBtn.disabled = !hasSome;
     }
 
     function populateSurnameDropdown(){
@@ -843,7 +831,6 @@
         .sort((a,b)=>a.name.localeCompare(b.name));
       refreshFindResults("");
     }
-
     function refreshFindResults(query){
       const q = norm(query);
       const matches = !q ? findIndex.slice(0,50)
@@ -863,36 +850,112 @@
       }
     }
 
-    function setCloudStatus(label){
-      document.getElementById("cloudStatus").innerHTML =
-        `Cloud: <span style="color:#1f7a3b;font-weight:900">${escapeHtml(label)}</span>`;
+    function saveUi(){
+      const ui = {
+        title: treeTitle.value || "Interactive Family Tree",
+        mode: modeSelect.value,
+        depth: depthSelect.value,
+        root: currentRoot || "",
+        surname: surnameSelect.value || "",
+        filterMode: filterMode.value || "none"
+      };
+      localStorage.setItem(LOCAL_KEY_UI, JSON.stringify(ui));
     }
 
-    function updateModeLabel(){
-      document.getElementById("modeStatus").textContent = (modeSelect.value === "anc") ? "Ancestors" : "Descendants";
+    function restoreUi(){
+      const raw = localStorage.getItem(LOCAL_KEY_UI);
+      if(!raw) return;
+      try{
+        const ui = JSON.parse(raw);
+        if(ui.title) treeTitle.value = ui.title;
+        if(ui.mode) modeSelect.value = ui.mode;
+        if(ui.depth) depthSelect.value = ui.depth;
+        if(ui.filterMode) filterMode.value = ui.filterMode;
+
+        if(ui.surname && Array.from(surnameSelect.options).some(o=>o.value===ui.surname)){
+          surnameSelect.value = ui.surname;
+          setSurnameStatusLabel();
+        }
+        populateRootDropdown();
+
+        if(ui.root && GED.individuals.has(ui.root)){
+          currentRoot = ui.root;
+          rootSelect.value = ui.root;
+        }
+      }catch(e){}
     }
 
-    function showTooltip(event, d){
-      if(event.target?.hasAttribute?.("data-tip")) return;
+    function ingestGedcom(text, label){
+      window.__lastGedText = text;
+      GED = parseGedcom(text);
 
-      const p = d.data;
-      const lines = [
-        `<strong>${escapeHtml(p.name || "Unknown")}</strong>`,
-        p.surname ? `Surname: ${escapeHtml(p.surname)}` : "",
-        (p.birt?.date || p.birt?.place) ? `Birth: ${escapeHtml([p.birt?.date, p.birt?.place].filter(Boolean).join(" — "))}` : "",
-        (p.deat?.date || p.deat?.place) ? `Death: ${escapeHtml([p.deat?.date, p.deat?.place].filter(Boolean).join(" — "))}` : "",
-        `ID: ${escapeHtml(p.id || "")}`
-      ].filter(Boolean);
+      enableControls();
+      populateSurnameDropdown();
+      populateRootDropdown();
+      rebuildFindIndex();
+      updateModeLabel();
+      setStatusCounts();
 
-      tooltip.innerHTML = lines.join("<br/>");
-      tooltip.style.left = (event.pageX + 14) + "px";
-      tooltip.style.top  = (event.pageY + 14) + "px";
-      tooltip.style.opacity = "1";
-      tooltip.style.transform = "translateY(0)";
+      setCloudStatus(label);
+      restoreUi();
     }
-    function hideTooltip(){
-      tooltip.style.opacity = "0";
-      tooltip.style.transform = "translateY(-6px)";
+
+    async function loadShared(){
+      try{
+        const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
+        if(!res.ok){
+          setCloudStatusError("not available");
+          return alert("Could not load shared tree (cloud not configured yet).");
+        }
+        const payload = await res.json();
+        if(!payload?.gedText){
+          setCloudStatusError("empty");
+          return alert("No shared GEDCOM uploaded yet.");
+        }
+        localStorage.setItem(LOCAL_KEY_TEXT, payload.gedText);
+        ingestGedcom(payload.gedText, payload.meta?.label || "shared tree loaded");
+      }catch(e){
+        setCloudStatusError("error");
+        alert("Could not load shared tree.");
+      }
+    }
+
+    function loadLocal(){
+      const t = localStorage.getItem(LOCAL_KEY_TEXT);
+      if(!t) return alert("No saved copy on this device yet.");
+      ingestGedcom(t, "loaded from your device");
+    }
+
+    function clearLocal(){
+      localStorage.removeItem(LOCAL_KEY_TEXT);
+      localStorage.removeItem(LOCAL_KEY_UI);
+      alert("Cleared from this device.");
+      location.reload();
+    }
+
+    async function uploadShared(){
+      const text = window.__lastGedText || "";
+      if(!text) return alert("Load or upload a GEDCOM first.");
+
+      // Simple password prompt — the real protection should be enforced in Netlify function via ADMIN_KEY env var
+      const adminKey = prompt("Password required to update the shared tree:");
+      if(!adminKey) return;
+
+      const note = prompt("Optional note for your records (not shown to others):") || "";
+
+      const res = await fetch(CLOUD_UPLOAD_URL, {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ adminKey, gedText:text, note })
+      });
+
+      const bodyText = await res.text().catch(()=> "");
+      if(!res.ok) return alert("Upload failed:\n\n" + (bodyText || ("HTTP "+res.status)));
+
+      let payload = {};
+      try{ payload = JSON.parse(bodyText); }catch(e){}
+      alert("Shared tree updated for everyone.");
+      setCloudStatus(payload.meta?.label || "shared tree updated");
     }
 
     function renderTree(){
@@ -1004,103 +1067,7 @@
       updateModeLabel();
     }
 
-    function ingestGedcom(text, label){
-      window.__lastGedText = text;
-      GED = parseGedcom(text);
-
-      enableControls();
-      populateSurnameDropdown();
-      populateRootDropdown();
-      rebuildFindIndex();
-      updateModeLabel();
-      setStatusCounts();
-      setCloudStatus(label);
-
-      restoreUi();
-      if(!currentRoot) return;
-    }
-
-    async function loadShared(){
-      const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-      if(!res.ok) return alert("Could not load shared tree (cloud not configured yet).");
-      const payload = await res.json().catch(()=>null);
-      if(!payload?.gedText) return alert("No shared GEDCOM uploaded yet.");
-      localStorage.setItem(LOCAL_KEY_TEXT, payload.gedText);
-      ingestGedcom(payload.gedText, payload.meta?.label || "shared tree loaded");
-    }
-
-    function loadLocal(){
-      const t = localStorage.getItem(LOCAL_KEY_TEXT);
-      if(!t) return alert("No saved copy on this device yet.");
-      ingestGedcom(t, "loaded from your device");
-    }
-
-    function clearLocal(){
-      localStorage.removeItem(LOCAL_KEY_TEXT);
-      localStorage.removeItem(LOCAL_KEY_UI);
-      alert("Cleared from this device.");
-    }
-
-    async function uploadShared(){
-      const text = window.__lastGedText || "";
-      if(!text) return alert("Load or upload a GEDCOM first.");
-
-      // Optional: keep your adminKey prompt if your Netlify function expects it.
-      const adminKey = prompt("Admin password required to update the shared tree:");
-      if(!adminKey) return;
-
-      const note = prompt("Optional note for your records (not shown to others):") || "";
-
-      const res = await fetch(CLOUD_UPLOAD_URL, {
-        method:"POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ adminKey, gedText:text, note })
-      });
-
-      const bodyText = await res.text().catch(()=> "");
-      if(!res.ok) return alert("Upload failed:\n\n" + (bodyText || ("HTTP "+res.status)));
-
-      const payload = JSON.parse(bodyText);
-      alert("Shared tree updated for everyone.");
-      setCloudStatus(payload.meta?.label || "shared tree updated");
-    }
-
-    function saveUi(){
-      const ui = {
-        title: treeTitle.value || "Interactive Family Tree",
-        mode: modeSelect.value,
-        depth: depthSelect.value,
-        root: currentRoot || "",
-        surname: surnameSelect.value || "",
-        filterMode: filterMode.value || "none"
-      };
-      localStorage.setItem(LOCAL_KEY_UI, JSON.stringify(ui));
-    }
-
-    function restoreUi(){
-      const raw = localStorage.getItem(LOCAL_KEY_UI);
-      if(!raw) return;
-      try{
-        const ui = JSON.parse(raw);
-        if(ui.title) treeTitle.value = ui.title;
-        if(ui.mode) modeSelect.value = ui.mode;
-        if(ui.depth) depthSelect.value = ui.depth;
-        if(ui.filterMode) filterMode.value = ui.filterMode;
-
-        if(ui.surname && Array.from(surnameSelect.options).some(o=>o.value===ui.surname)){
-          surnameSelect.value = ui.surname;
-          setSurnameStatusLabel();
-        }
-        populateRootDropdown();
-
-        if(ui.root && GED.individuals.has(ui.root)){
-          currentRoot = ui.root;
-          rootSelect.value = ui.root;
-        }
-      }catch(e){}
-    }
-
-    // Events
+    // Upload local GEDCOM
     gedFile.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
       if(!file) return;
@@ -1108,9 +1075,11 @@
       ingestGedcom(text, "loaded from upload");
     });
 
+    // Buttons
     loadSharedBtn.addEventListener("click", loadShared);
     loadLocalBtn.addEventListener("click", loadLocal);
     clearLocalBtn.addEventListener("click", clearLocal);
+
     uploadSharedBtn.addEventListener("click", uploadShared);
     saveLocalBtn.addEventListener("click", () => {
       const t = window.__lastGedText || "";
@@ -1126,8 +1095,15 @@
       if(currentRoot) renderTree();
       saveUi();
     });
-    filterMode.addEventListener("change", () => { if(currentRoot) renderTree(); saveUi(); });
-    modeSelect.addEventListener("change", () => { updateModeLabel(); if(currentRoot) renderTree(); saveUi(); });
+    filterMode.addEventListener("change", () => {
+      if(currentRoot) renderTree();
+      saveUi();
+    });
+    modeSelect.addEventListener("change", () => {
+      updateModeLabel();
+      if(currentRoot) renderTree();
+      saveUi();
+    });
     rootSelect.addEventListener("change", () => { currentRoot = rootSelect.value; saveUi(); });
     depthSelect.addEventListener("change", () => { if(currentRoot) renderTree(); saveUi(); });
 
@@ -1153,18 +1129,7 @@
     });
     clearFindBtn.addEventListener("click", () => { findBox.value = ""; refreshFindResults(""); });
 
-    function setStatusCounts(){
-      document.getElementById("peopleCount").textContent = GED.individuals.size;
-      document.getElementById("familyCount").textContent = GED.families.size;
-
-      const hasSome = GED.individuals.size > 0;
-      exportPngBtn.disabled = !hasSome;
-      exportSvgBtn.disabled = !hasSome;
-      exportPdfBtn.disabled = !hasSome;
-      exportJsonBtn.disabled = !hasSome;
-      exportCsvBtn.disabled = !hasSome;
-    }
-
+    // Export helpers
     function downloadBlob(blob, filename){
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1224,8 +1189,13 @@
     // Boot
     (function boot(){
       maybeShowWalkthrough();
+
       const t = localStorage.getItem(LOCAL_KEY_TEXT);
-      if(t) ingestGedcom(t, "auto-loaded from your device");
+      if(t){
+        ingestGedcom(t, "auto-loaded from your device");
+      } else {
+        setCloudStatusError("not loaded");
+      }
     })();
   </script>
 </body>
