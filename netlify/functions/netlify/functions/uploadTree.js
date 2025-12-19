@@ -1,21 +1,18 @@
 // netlify/functions/uploadTree.js
 const { createClient } = require("@supabase/supabase-js");
 
+function json(statusCode, payload) {
+  return {
+    statusCode,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  };
+}
+
 exports.handler = async (event) => {
   try {
-    // Expect client to send: Authorization: Bearer <supabase_access_token>
-    const authHeader = event.headers.authorization || event.headers.Authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-    if (!token) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, message: "Missing Bearer token" }) };
-    }
-
-    const body = JSON.parse(event.body || "{}");
-    const tree = body.tree;
-
-    if (!tree) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, message: "Missing tree payload" }) };
+    if (event.httpMethod !== "POST") {
+      return json(405, { ok: false, message: "Method Not Allowed" });
     }
 
     const supabaseAdmin = createClient(
@@ -23,39 +20,30 @@ exports.handler = async (event) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Verify the user from the token
-    const { data: userRes, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userRes?.user) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, message: "Invalid session token" }) };
+    const body = JSON.parse(event.body || "{}");
+    const adminKeyFromBody = body.adminKey || "";
+    const tree = body.tree || null;
+
+    // Mode A (NOW): ADMIN_KEY password gate (no Supabase login)
+    if (process.env.ADMIN_KEY) {
+      if (!adminKeyFromBody) return json(401, { ok: false, message: "Missing adminKey" });
+      if (adminKeyFromBody !== process.env.ADMIN_KEY) {
+        return json(401, { ok: false, message: "Unauthorized (bad admin password)" });
+      }
+      if (!tree) return json(400, { ok: false, message: "Missing tree payload" });
+
+      const { error: insertErr } = await supabaseAdmin
+        .from("family_tree")
+        .insert([{ data: tree }]);
+
+      if (insertErr) return json(500, { ok: false, message: insertErr.message });
+
+      return json(200, { ok: true });
     }
 
-    const uid = userRes.user.id;
-
-    // Check admins table
-    const { data: isAdmin, error: adminErr } = await supabaseAdmin
-      .from("admins")
-      .select("user_id")
-      .eq("user_id", uid)
-      .maybeSingle();
-
-    if (adminErr) {
-      return { statusCode: 500, body: JSON.stringify({ ok: false, error: adminErr }) };
-    }
-    if (!isAdmin) {
-      return { statusCode: 403, body: JSON.stringify({ ok: false, message: "Not an admin" }) };
-    }
-
-    // Save new tree snapshot
-    const { error: insertErr } = await supabaseAdmin
-      .from("family_tree")
-      .insert([{ data: tree }]);
-
-    if (insertErr) {
-      return { statusCode: 500, body: JSON.stringify({ ok: false, error: insertErr }) };
-    }
-
-    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+    // Mode B (LATER): Bearer token + admins table (kept for future)
+    return json(400, { ok: false, message: "ADMIN_KEY not set; token mode not enabled in this version." });
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ ok: false, message: e.message }) };
+    return json(500, { ok: false, message: e.message });
   }
 };
