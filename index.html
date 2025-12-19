@@ -466,13 +466,8 @@
     // ----------------------------------------------------------------------------
     // FUTURE ADMIN LOGIN (DISABLED ON PURPOSE)
     // ----------------------------------------------------------------------------
-    // If you ever want Supabase login later, keep it server-side + RLS.
-    // For now, we removed the UI and do not initialize Supabase in the browser.
-    //
-    // Example future plan:
-    //  - Use supabase.auth on a separate /admin page
-    //  - Store session, set is_admin in profiles
-    //  - Netlify functions validate JWT and allow uploads
+    // No Supabase browser client in this app.
+    // Cloud persistence is handled only by Netlify functions.
     // ----------------------------------------------------------------------------
 
     // GEDCOM parsing
@@ -734,6 +729,7 @@
     showWalkthroughBtn.addEventListener("click", ()=>{ walkthrough.classList.add("show"); });
 
     function enableControls(){
+      rootSelect.disabled = false;
       depthSelect.disabled = false;
       renderBtn.disabled = false;
       modeSelect.disabled = false;
@@ -900,24 +896,74 @@
       restoreUi();
     }
 
+    // ---------------------------------------------------------------------------
+    // ✅ CORRECT loadShared + uploadShared for your Netlify/Supabase functions:
+    //
+    // getTree returns:   { ok:true, tree: { gedText, meta } }
+    // uploadTree expects: { adminKey, tree: { gedText, meta } }
+    // ---------------------------------------------------------------------------
+
     async function loadShared(){
       try{
         const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-        if(!res.ok){
+        const payload = await res.json().catch(()=>null);
+
+        if(!res.ok || !payload?.ok){
           setCloudStatusError("not available");
-          return alert("Could not load shared tree (cloud not configured yet).");
+          return alert("Could not load shared tree.\n\n" + (payload?.message || ("HTTP " + res.status)));
         }
-        const payload = await res.json();
-        if(!payload?.gedText){
+
+        const tree = payload.tree || null;
+        const gedText = tree?.gedText || "";
+
+        if(!gedText){
           setCloudStatusError("empty");
           return alert("No shared GEDCOM uploaded yet.");
         }
-        localStorage.setItem(LOCAL_KEY_TEXT, payload.gedText);
-        ingestGedcom(payload.gedText, payload.meta?.label || "shared tree loaded");
+
+        // Cache a local copy too (optional but helpful)
+        localStorage.setItem(LOCAL_KEY_TEXT, gedText);
+
+        const label = tree?.meta?.label || tree?.meta?.note || "shared tree loaded";
+        ingestGedcom(gedText, label);
       }catch(e){
         setCloudStatusError("error");
-        alert("Could not load shared tree.");
+        alert("Could not load shared tree.\n\n" + (e?.message || "Unknown error"));
       }
+    }
+
+    async function uploadShared(){
+      const text = window.__lastGedText || "";
+      if(!text) return alert("Load or upload a GEDCOM first.");
+
+      const adminKey = prompt("Password required to update the shared tree:");
+      if(!adminKey) return;
+
+      const note = prompt("Optional note for your records (not shown to others):") || "";
+
+      const tree = {
+        gedText: text,
+        meta: {
+          note,
+          label: "shared tree updated",
+          uploadedAt: new Date().toISOString()
+        }
+      };
+
+      const res = await fetch(CLOUD_UPLOAD_URL, {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ adminKey, tree })
+      });
+
+      const payload = await res.json().catch(()=>null);
+
+      if(!res.ok || !payload?.ok){
+        return alert("Upload failed:\n\n" + (payload?.message || ("HTTP " + res.status)));
+      }
+
+      alert("Shared tree updated for everyone.");
+      setCloudStatus(tree.meta.label);
     }
 
     function loadLocal(){
@@ -931,31 +977,6 @@
       localStorage.removeItem(LOCAL_KEY_UI);
       alert("Cleared from this device.");
       location.reload();
-    }
-
-    async function uploadShared(){
-      const text = window.__lastGedText || "";
-      if(!text) return alert("Load or upload a GEDCOM first.");
-
-      // Simple password prompt — the real protection should be enforced in Netlify function via ADMIN_KEY env var
-      const adminKey = prompt("Password required to update the shared tree:");
-      if(!adminKey) return;
-
-      const note = prompt("Optional note for your records (not shown to others):") || "";
-
-      const res = await fetch(CLOUD_UPLOAD_URL, {
-        method:"POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ adminKey, gedText:text, note })
-      });
-
-      const bodyText = await res.text().catch(()=> "");
-      if(!res.ok) return alert("Upload failed:\n\n" + (bodyText || ("HTTP "+res.status)));
-
-      let payload = {};
-      try{ payload = JSON.parse(bodyText); }catch(e){}
-      alert("Shared tree updated for everyone.");
-      setCloudStatus(payload.meta?.label || "shared tree updated");
     }
 
     function renderTree(){
