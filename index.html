@@ -902,8 +902,7 @@
     // getTree returns:   { ok:true, tree: { gedText, meta } }
     // uploadTree expects: { adminKey, tree: { gedText, meta } }
     // ---------------------------------------------------------------------------
-
-    async function loadShared(){
+async function loadShared(){
   try{
     const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
 
@@ -953,6 +952,29 @@ async function uploadShared(){
       meta: { note, label: "shared tree updated", uploadedAt: new Date().toISOString() }
     }
   };
+
+  try{
+    const res = await fetch(CLOUD_UPLOAD_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const outText = await res.text();
+    let payload = null;
+    try { payload = JSON.parse(outText); } catch { payload = null; }
+
+    if(!res.ok || !payload?.ok){
+      return alert("Upload failed:\n\n" + (payload?.message || ("HTTP " + res.status + "\n" + outText.slice(0,200))));
+    }
+
+    alert("Shared tree updated for everyone.");
+    setCloudStatus("shared tree updated");
+  }catch(e){
+    alert("Upload failed:\n\n" + (e?.message || "Unknown error"));
+  }
+}
+
 
   try{
     const res = await fetch(CLOUD_UPLOAD_URL, {
