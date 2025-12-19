@@ -16,10 +16,7 @@ exports.handler = async () => {
       .single();
 
     if (error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, message: error.message }) };
     }
 
     return {
