@@ -1,4 +1,3 @@
-// netlify/functions/getTree.js
 const { createClient } = require("@supabase/supabase-js");
 
 exports.handler = async () => {
@@ -13,18 +12,29 @@ exports.handler = async () => {
       .select("data, created_at")
       .order("created_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      return { statusCode: 500, body: JSON.stringify({ ok: false, message: error.message }) };
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: false, error }),
+      };
     }
+
+    const gedText = data?.data?.gedText || null;
+    const meta = data?.data?.meta || null;
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true, tree: data?.data ?? null }),
+      body: JSON.stringify({ ok: true, gedText, meta }),
     };
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ ok: false, message: e.message }) };
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: false, message: e.message }),
+    };
   }
 };
