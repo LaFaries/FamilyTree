@@ -1170,6 +1170,16 @@ exportCsvBtn.addEventListener("click", () => {
   const t = localStorage.getItem(LOCAL_KEY_TEXT);
   if(t) ingestGedcom(t, "auto-loaded from your device");
 })();
+</script><script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const SUPABASE_URL = "https://jpenrpbpeuorkscumqba.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_qBdygFxObSKwHhnsPghnjg_clzeaaf5";
+
+  window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  console.log("✅ Supabase initialized");
 </script>
+
 </body>
 </html>
