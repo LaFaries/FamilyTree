@@ -1,49 +1,66 @@
-// netlify/functions/uploadTree.js
 const { createClient } = require("@supabase/supabase-js");
-
-function json(statusCode, payload) {
-  return {
-    statusCode,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  };
-}
 
 exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") {
-      return json(405, { ok: false, message: "Method Not Allowed" });
+      return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const supabaseAdmin = createClient(
+    const { adminKey, gedText, note } = JSON.parse(event.body || "{}");
+
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+      return {
+        statusCode: 403,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: false, message: "Forbidden" }),
+      };
+    }
+
+    if (!gedText || typeof gedText !== "string") {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: false, message: "Missing gedText" }),
+      };
+    }
+
+    const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    const body = JSON.parse(event.body || "{}");
-    const adminKeyFromBody = body.adminKey || "";
-    const tree = body.tree || null;
+    const now = new Date();
+    const label = `shared updated ${now.toLocaleString()}`;
 
-    // Mode A (NOW): ADMIN_KEY password gate (no Supabase login)
-    if (process.env.ADMIN_KEY) {
-      if (!adminKeyFromBody) return json(401, { ok: false, message: "Missing adminKey" });
-      if (adminKeyFromBody !== process.env.ADMIN_KEY) {
-        return json(401, { ok: false, message: "Unauthorized (bad admin password)" });
-      }
-      if (!tree) return json(400, { ok: false, message: "Missing tree payload" });
+    const payload = {
+      gedText,
+      meta: {
+        label,
+        note: note || "",
+        savedAt: now.toISOString(),
+      },
+    };
 
-      const { error: insertErr } = await supabaseAdmin
-        .from("family_tree")
-        .insert([{ data: tree }]);
+    const { error } = await supabase.from("family_tree").insert([{ data: payload }]);
 
-      if (insertErr) return json(500, { ok: false, message: insertErr.message });
-
-      return json(200, { ok: true });
+    if (error) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: false, error }),
+      };
     }
 
-    // Mode B (LATER): Bearer token + admins table (kept for future)
-    return json(400, { ok: false, message: "ADMIN_KEY not set; token mode not enabled in this version." });
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: true, meta: payload.meta }),
+    };
   } catch (e) {
-    return json(500, { ok: false, message: e.message });
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: false, message: e.message }),
+    };
   }
 };
