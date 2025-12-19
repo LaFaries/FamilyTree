@@ -904,51 +904,61 @@
     // ---------------------------------------------------------------------------
 
     async function loadShared(){
-      try{
-        const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-        const payload = await res.json().catch(()=>null);
+  try{
+    const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
+    const payload = await res.json().catch(()=>null);
 
-        if(!res.ok || !payload?.ok){
-          setCloudStatusError("not available");
-          return alert("Could not load shared tree.\n\n" + (payload?.message || ("HTTP " + res.status)));
-        }
-
-        const tree = payload.tree || null;
-        const gedText = tree?.gedText || "";
-
-        if(!gedText){
-          setCloudStatusError("empty");
-          return alert("No shared GEDCOM uploaded yet.");
-        }
-
-        // Cache a local copy too (optional but helpful)
-        localStorage.setItem(LOCAL_KEY_TEXT, gedText);
-
-        const label = tree?.meta?.label || tree?.meta?.note || "shared tree loaded";
-        ingestGedcom(gedText, label);
-      }catch(e){
-        setCloudStatusError("error");
-        alert("Could not load shared tree.\n\n" + (e?.message || "Unknown error"));
-      }
+    if(!res.ok || !payload?.ok){
+      setCloudStatusError("not available");
+      return alert("Could not load shared tree.\n\n" + (payload?.message || ("HTTP " + res.status)));
     }
 
-    async function uploadShared(){
-      const text = window.__lastGedText || "";
-      if(!text) return alert("Load or upload a GEDCOM first.");
+    // ✅ OPTION B: flat payload
+    const gedText = payload?.gedText || "";
 
-      const adminKey = prompt("Password required to update the shared tree:");
-      if(!adminKey) return;
+    if(!gedText){
+      setCloudStatusError("empty");
+      return alert("No shared GEDCOM uploaded yet.");
+    }
 
-      const note = prompt("Optional note for your records (not shown to others):") || "";
+    // Cache locally too (optional)
+    localStorage.setItem(LOCAL_KEY_TEXT, gedText);
 
-      const tree = {
-        gedText: text,
-        meta: {
-          note,
-          label: "shared tree updated",
-          uploadedAt: new Date().toISOString()
-        }
-      };
+    const label = payload?.meta?.label || payload?.meta?.note || "shared tree loaded";
+    ingestGedcom(gedText, label);
+  }catch(e){
+    setCloudStatusError("error");
+    alert("Could not load shared tree.\n\n" + (e?.message || "Unknown error"));
+  }
+}
+
+
+   async function uploadShared(){
+  const text = window.__lastGedText || "";
+  if(!text) return alert("Load or upload a GEDCOM first.");
+
+  const adminKey = prompt("Password required to update the shared tree:");
+  if(!adminKey) return;
+
+  const note = prompt("Optional note for your records (not shown to others):") || "";
+
+  // ✅ OPTION B: flat request body
+  const res = await fetch(CLOUD_UPLOAD_URL, {
+    method:"POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ adminKey, gedText: text, note })
+  });
+
+  const payload = await res.json().catch(()=>null);
+
+  if(!res.ok || !payload?.ok){
+    return alert("Upload failed:\n\n" + (payload?.message || ("HTTP " + res.status)));
+  }
+
+  alert("Shared tree updated for everyone.");
+  setCloudStatus(payload?.meta?.label || "shared tree updated");
+}
+
 
       const res = await fetch(CLOUD_UPLOAD_URL, {
         method:"POST",
