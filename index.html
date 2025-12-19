@@ -906,20 +906,76 @@
     async function loadShared(){
   try{
     const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-    const payload = await res.json().catch(()=>null);
+
+    // safer than res.json() because Netlify may return HTML on errors
+    const text = await res.text();
+    let payload = null;
+    try { payload = JSON.parse(text); } catch { payload = null; }
 
     if(!res.ok || !payload?.ok){
       setCloudStatusError("not available");
-      return alert("Could not load shared tree.\n\n" + (payload?.message || ("HTTP " + res.status)));
+      return alert("Could not load shared tree.\n\n" + (payload?.message || ("HTTP " + res.status + "\n" + text.slice(0,200))));
     }
 
-    // ✅ OPTION B: flat payload
-    const gedText = payload?.gedText || "";
+    // Supports BOTH formats (Option A nested OR Option B flat)
+    const gedText = payload?.gedText || payload?.tree?.gedText || "";
+    const meta    = payload?.meta || payload?.tree?.meta || {};
 
     if(!gedText){
       setCloudStatusError("empty");
       return alert("No shared GEDCOM uploaded yet.");
     }
+
+    localStorage.setItem(LOCAL_KEY_TEXT, gedText);
+    ingestGedcom(gedText, meta?.label || meta?.note || "shared tree loaded");
+  }catch(e){
+    setCloudStatusError("error");
+    alert("Could not load shared tree.\n\n" + (e?.message || "Unknown error"));
+  }
+}
+
+async function uploadShared(){
+  const text = window.__lastGedText || "";
+  if(!text) return alert("Load or upload a GEDCOM first.");
+
+  const adminKey = prompt("Password required to update the shared tree:");
+  if(!adminKey) return;
+
+  const note = prompt("Optional note for your records (not shown to others):") || "";
+
+  // Send BOTH shapes so your backend works whether it expects A or B
+  const body = {
+    adminKey,
+    gedText: text,
+    meta: { note, label: "shared tree updated", uploadedAt: new Date().toISOString() },
+    tree: {
+      gedText: text,
+      meta: { note, label: "shared tree updated", uploadedAt: new Date().toISOString() }
+    }
+  };
+
+  try{
+    const res = await fetch(CLOUD_UPLOAD_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const outText = await res.text();
+    let payload = null;
+    try { payload = JSON.parse(outText); } catch { payload = null; }
+
+    if(!res.ok || !payload?.ok){
+      return alert("Upload failed:\n\n" + (payload?.message || ("HTTP " + res.status + "\n" + outText.slice(0,200))));
+    }
+
+    alert("Shared tree updated for everyone.");
+    setCloudStatus("shared tree updated");
+  }catch(e){
+    alert("Upload failed:\n\n" + (e?.message || "Unknown error"));
+  }
+}
+
 
     // Cache locally too (optional)
     localStorage.setItem(LOCAL_KEY_TEXT, gedText);
