@@ -6,7 +6,7 @@ exports.handler = async (event) => {
       return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const { adminKey, gedText, note } = JSON.parse(event.body || "{}");
+    const { adminKey, tree } = JSON.parse(event.body || "{}");
 
     if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
       return {
@@ -16,30 +16,29 @@ exports.handler = async (event) => {
       };
     }
 
+    const gedText = tree?.gedText;
     if (!gedText || typeof gedText !== "string") {
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, message: "Missing gedText" }),
+        body: JSON.stringify({ ok: false, message: "Missing tree.gedText" }),
       };
     }
+
+    // normalize meta so it always exists
+    const now = new Date().toISOString();
+    const meta = {
+      ...(tree.meta || {}),
+      uploadedAt: tree?.meta?.uploadedAt || now,
+      label: tree?.meta?.label || "shared tree updated",
+    };
+
+    const payload = { gedText, meta };
 
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-
-    const now = new Date();
-    const label = `shared updated ${now.toLocaleString()}`;
-
-    const payload = {
-      gedText,
-      meta: {
-        label,
-        note: note || "",
-        savedAt: now.toISOString(),
-      },
-    };
 
     const { error } = await supabase.from("family_tree").insert([{ data: payload }]);
 
@@ -47,14 +46,14 @@ exports.handler = async (event) => {
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, error }),
+        body: JSON.stringify({ ok: false, message: "Supabase insert failed", error }),
       };
     }
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true, meta: payload.meta }),
+      body: JSON.stringify({ ok: true, tree: payload }),
     };
   } catch (e) {
     return {
