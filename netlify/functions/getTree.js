@@ -18,17 +18,16 @@ exports.handler = async () => {
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, error }),
+        body: JSON.stringify({ ok: false, message: "Supabase read failed", error }),
       };
     }
 
-    const gedText = data?.data?.gedText || null;
-    const meta = data?.data?.meta || null;
+    const tree = data?.data ?? null;
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true, gedText, meta }),
+      body: JSON.stringify({ ok: true, tree }),
     };
   } catch (e) {
     return {
