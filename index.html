@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Interactive Family Tree</title>
+<div style="margin:12px 0;">
+  <input id="loginEmail" type="email" placeholder="Enter admin email" />
+  <button onclick="login()">Log in</button>
+  <button onclick="logout()">Log out</button>
+</div>
 
   <style>
     :root{
@@ -435,6 +440,23 @@
   <div class="tooltip" id="tooltip"></div>
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+async function login() {
+  const email = document.getElementById("loginEmail").value;
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+  });
+
+  if (error) {
+    alert("Login error: " + error.message);
+  } else {
+    alert("Check your email for the login link.");
+  }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  alert("Logged out");
+}
 
   // Supabase credentials (browser-safe)
   const SUPABASE_URL = "https://jpenrpbpeuorkscumqba.supabase.co";
