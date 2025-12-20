@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Interactive Family Tree</title>
 
   <style>
@@ -431,9 +431,9 @@
 
   <script>
     // ============================================================
-    // Cloud endpoints (Netlify Functions)
+    // CLOUD ENDPOINTS (Netlify Functions)
     // ============================================================
-    const CLOUD_GET_URL    = "/.netlify/functions/getTree";
+    const CLOUD_GET_URL = "/.netlify/functions/getTree";
     const CLOUD_UPLOAD_URL = "/.netlify/functions/uploadTree";
 
     // Local storage keys
@@ -442,16 +442,14 @@
     const LOCAL_KEY_WT   = "ift:walkthroughDismissed:v1";
 
     // ============================================================
-    // Tooltip (UI help)
+    // TOOLTIP (UI HELP)
     // ============================================================
     const uiTip = document.getElementById("tooltip");
-
     function escapeHtml(str){
       return String(str).replace(/[&<>"']/g, s => ({
         "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
       }[s]));
     }
-
     function showUiTip(evt){
       const t = evt.target?.getAttribute?.("data-tip");
       if(!t) return;
@@ -461,47 +459,46 @@
       uiTip.style.opacity = "1";
       uiTip.style.transform = "translateY(0)";
     }
-
     function hideUiTip(){
       uiTip.style.opacity = "0";
       uiTip.style.transform = "translateY(-6px)";
     }
-
     document.addEventListener("mouseover", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) showUiTip(e); });
     document.addEventListener("mousemove", (e)=>{ if(uiTip.style.opacity==="1") { uiTip.style.left=(e.pageX+14)+"px"; uiTip.style.top=(e.pageY+14)+"px"; } });
     document.addEventListener("mouseout", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) hideUiTip(); });
 
     // ============================================================
-    // GEDCOM parsing
+    // HELPERS
+    // ============================================================
+    function safeJsonParse(text){
+      try { return JSON.parse(text); } catch { return null; }
+    }
+    function setCloudStatus(label){
+      document.getElementById("cloudStatus").innerHTML =
+        `Cloud: <span style="color:#1f7a3b;font-weight:900">${escapeHtml(label)}</span>`;
+    }
+    function setCloudStatusError(label){
+      document.getElementById("cloudStatus").innerHTML =
+        `Cloud: <span style="color:#8a1e2b;font-weight:900">${escapeHtml(label)}</span>`;
+    }
+
+    // ============================================================
+    // GEDCOM PARSING
     // ============================================================
     function parseGedcom(text){
       const lines = text.split(/\r?\n/);
       const individuals = new Map();
       const families = new Map();
-
       let current=null, currentType=null, currentEvent=null;
 
       const ensurePerson=(id)=>{
         if(!individuals.has(id)){
-          individuals.set(id,{
-            id,
-            name:"Unknown",
-            nameRaw:"",
-            surname:"",
-            sex:"",
-            birt:{date:"",place:""},
-            deat:{date:"",place:""},
-            famc:[],
-            fams:[]
-          });
+          individuals.set(id,{ id, name:"Unknown", nameRaw:"", surname:"", sex:"",
+            birt:{date:"",place:""}, deat:{date:"",place:""}, famc:[], fams:[] });
         }
         return individuals.get(id);
       };
-
-      const ensureFamily=(id)=>{
-        if(!families.has(id)) families.set(id,{ id, husb:"", wife:"", chil:[] });
-        return families.get(id);
-      };
+      const ensureFamily=(id)=>{ if(!families.has(id)) families.set(id,{id,husb:"",wife:"",chil:[]}); return families.get(id); };
 
       function extractSurnameFromName(rawName){
         const m = String(rawName||"").match(/\/([^\/]+)\//);
@@ -561,12 +558,10 @@
           if(tag === "CHIL") current.chil.push(value.trim());
         }
       }
-
       return { individuals, families };
     }
 
     const norm = (s)=>String(s||"").trim().toLowerCase();
-
     function surnameMatches(person, filter){
       const wantRaw = norm(filter);
       if(!wantRaw) return true;
@@ -616,7 +611,6 @@
         }
         return base;
       }
-
       return buildNode(rootId, 1);
     }
 
@@ -659,12 +653,11 @@
         }
         return base;
       }
-
       return buildNode(rootId, 1);
     }
 
     // ============================================================
-    // App state + helpers
+    // APP STATE
     // ============================================================
     let GED = { individuals:new Map(), families:new Map() };
     let currentRoot = "";
@@ -677,21 +670,10 @@
       const m = String(s||"").match(/\b(16|17|18|19|20)\d{2}\b/);
       return m ? m[0] : "";
     }
-
     function clearSvg(){ svg.selectAll("*").remove(); }
 
-    function setCloudStatus(label){
-      document.getElementById("cloudStatus").innerHTML =
-        `Cloud: <span style="color:#1f7a3b;font-weight:900">${escapeHtml(label)}</span>`;
-    }
-    function setCloudStatusError(label){
-      document.getElementById("cloudStatus").innerHTML =
-        `Cloud: <span style="color:#8a1e2b;font-weight:900">${escapeHtml(label)}</span>`;
-    }
-
-    function showPersonTooltip(event, d){
+    function showTooltip(event, d){
       if(event.target?.hasAttribute?.("data-tip")) return;
-
       const p = d.data;
       const lines = [
         `<strong>${escapeHtml(p.name || "Unknown")}</strong>`,
@@ -707,13 +689,13 @@
       tooltip.style.opacity = "1";
       tooltip.style.transform = "translateY(0)";
     }
-    function hidePersonTooltip(){
+    function hideTooltip(){
       tooltip.style.opacity = "0";
       tooltip.style.transform = "translateY(-6px)";
     }
 
     // ============================================================
-    // DOM refs
+    // DOM REFS
     // ============================================================
     const gedFile = document.getElementById("gedFile");
     const treeTitle = document.getElementById("treeTitle");
@@ -744,9 +726,6 @@
     const dismissWalkthroughBtn = document.getElementById("dismissWalkthroughBtn");
     const showWalkthroughBtn = document.getElementById("showWalkthroughBtn");
 
-    // ============================================================
-    // Walkthrough
-    // ============================================================
     function maybeShowWalkthrough(){
       const dismissed = localStorage.getItem(LOCAL_KEY_WT);
       if(!dismissed) walkthrough.classList.add("show");
@@ -757,9 +736,6 @@
     });
     showWalkthroughBtn.addEventListener("click", ()=>{ walkthrough.classList.add("show"); });
 
-    // ============================================================
-    // UI enable/labels/counts
-    // ============================================================
     function enableControls(){
       rootSelect.disabled = false;
       depthSelect.disabled = false;
@@ -781,7 +757,6 @@
       const val = surnameSelect.value;
       document.getElementById("surnameStatus").textContent = val ? val : "All";
     }
-
     function updateModeLabel(){
       document.getElementById("modeStatus").textContent = (modeSelect.value === "anc") ? "Ancestors" : "Descendants";
     }
@@ -853,22 +828,16 @@
       }
     }
 
-    // ============================================================
-    // Find index
-    // ============================================================
     let findIndex = [];
-
     function rebuildFindIndex(){
       findIndex = Array.from(GED.individuals.values())
         .map(p => ({ id:p.id, name:p.name || "Unknown", surname:p.surname || "" }))
         .sort((a,b)=>a.name.localeCompare(b.name));
       refreshFindResults("");
     }
-
     function refreshFindResults(query){
       const q = norm(query);
-      const matches = !q
-        ? findIndex.slice(0,50)
+      const matches = !q ? findIndex.slice(0,50)
         : findIndex.filter(p => norm(p.name).includes(q) || norm(p.surname).includes(q)).slice(0,50);
 
       findResults.innerHTML = "";
@@ -885,9 +854,6 @@
       }
     }
 
-    // ============================================================
-    // Persist UI settings
-    // ============================================================
     function saveUi(){
       const ui = {
         title: treeTitle.value || "Interactive Family Tree",
@@ -914,19 +880,15 @@
           surnameSelect.value = ui.surname;
           setSurnameStatusLabel();
         }
-
         populateRootDropdown();
 
         if(ui.root && GED.individuals.has(ui.root)){
           currentRoot = ui.root;
           rootSelect.value = ui.root;
         }
-      }catch(_e){}
+      }catch(e){}
     }
 
-    // ============================================================
-    // Ingest GEDCOM
-    // ============================================================
     function ingestGedcom(text, cloudLabel){
       window.__lastGedText = text;
       GED = parseGedcom(text);
@@ -943,29 +905,25 @@
     }
 
     // ============================================================
-    // Cloud: load shared tree
-    // Supports both response shapes:
-    //   A) { ok:true, tree:{ gedText, meta } }
-    //   B) { ok:true, gedText, meta }
+    // CLOUD: loadShared / uploadShared (SINGLE DEFINITIONS)
+    // Supports multiple response/request shapes to avoid mismatches.
     // ============================================================
     async function loadShared(){
       try{
         const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-        const rawText = await res.text();
-
-        let payload = null;
-        try { payload = JSON.parse(rawText); } catch { payload = null; }
+        const raw = await res.text();
+        const payload = safeJsonParse(raw);
 
         if(!res.ok || !payload?.ok){
-          setCloudStatusError("not available");
+          setCloudStatusError("empty");
           return alert(
             "Could not load shared tree.\n\n" +
-            (payload?.message || ("HTTP " + res.status + "\n" + rawText.slice(0,200)))
+            (payload?.message || `HTTP ${res.status}\n${raw.slice(0, 200)}`)
           );
         }
 
-        const gedText = payload?.gedText || payload?.tree?.gedText || "";
-        const meta    = payload?.meta || payload?.tree?.meta || {};
+        const gedText = payload.gedText || payload.tree?.gedText || "";
+        const meta = payload.meta || payload.tree?.meta || {};
 
         if(!gedText){
           setCloudStatusError("empty");
@@ -980,15 +938,9 @@
       }
     }
 
-    // ============================================================
-    // Cloud: upload shared tree
-    // Sends both request shapes:
-    //   A) { adminKey, tree:{gedText,meta} }
-    //   B) { adminKey, gedText, meta, note }
-    // ============================================================
     async function uploadShared(){
-      const text = window.__lastGedText || "";
-      if(!text) return alert("Load or upload a GEDCOM first.");
+      const gedText = window.__lastGedText || "";
+      if(!gedText) return alert("Load or upload a GEDCOM first.");
 
       const adminKey = prompt("Password required to update the shared tree:");
       if(!adminKey) return;
@@ -996,12 +948,12 @@
       const note = prompt("Optional note for your records (not shown to others):") || "";
       const meta = { note, label: "shared tree updated", uploadedAt: new Date().toISOString() };
 
+      // Send both shapes for backend compatibility
       const body = {
         adminKey,
-        gedText: text,
+        gedText,
         meta,
-        note,
-        tree: { gedText: text, meta }
+        tree: { gedText, meta }
       };
 
       try{
@@ -1011,26 +963,27 @@
           body: JSON.stringify(body)
         });
 
-        const rawText = await res.text();
-        let payload = null;
-        try { payload = JSON.parse(rawText); } catch { payload = null; }
+        const raw = await res.text();
+        const payload = safeJsonParse(raw);
 
         if(!res.ok || !payload?.ok){
           return alert(
-            "Upload failed:\n\n" +
-            (payload?.message || ("HTTP " + res.status + "\n" + rawText.slice(0,200)))
+            "Upload failed.\n\n" +
+            (payload?.message || `HTTP ${res.status}\n${raw.slice(0, 200)}`)
           );
         }
 
+        // optional local cache
+        localStorage.setItem(LOCAL_KEY_TEXT, gedText);
         alert("Shared tree updated for everyone.");
-        setCloudStatus(payload?.meta?.label || meta.label);
+        setCloudStatus("shared tree updated");
       }catch(e){
-        alert("Upload failed:\n\n" + (e?.message || "Unknown error"));
+        alert("Upload failed.\n\n" + (e?.message || "Unknown error"));
       }
     }
 
     // ============================================================
-    // Local
+    // LOCAL
     // ============================================================
     function loadLocal(){
       const t = localStorage.getItem(LOCAL_KEY_TEXT);
@@ -1046,7 +999,7 @@
     }
 
     // ============================================================
-    // Render tree (D3)
+    // RENDER TREE
     // ============================================================
     function renderTree(){
       if(!currentRoot) return;
@@ -1062,7 +1015,7 @@
 
       clearSvg();
 
-      const width  = document.getElementById("treeViewport").clientWidth;
+      const width = document.getElementById("treeViewport").clientWidth;
       const height = document.getElementById("treeViewport").clientHeight;
 
       const g = svg.append("g").attr("class","viewportG");
@@ -1102,10 +1055,10 @@
           if(fm === "none" || !surname) return 1;
           const isMatch = !!d.data._match;
           if(fm === "hide") return isMatch ? 1 : 0;
-          return isMatch ? 1 : 0.22; // fade
+          return isMatch ? 1 : 0.22;
         })
-        .on("mousemove", (event, d) => showPersonTooltip(event, d))
-        .on("mouseleave", hidePersonTooltip)
+        .on("mousemove", (event, d) => showTooltip(event, d))
+        .on("mouseleave", hideTooltip)
         .on("click", (event, d) => {
           if(!d?.data?.id) return;
           currentRoot = d.data.id;
@@ -1158,7 +1111,7 @@
     }
 
     // ============================================================
-    // Upload local GEDCOM
+    // FILE UPLOAD (LOCAL INGEST)
     // ============================================================
     gedFile.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
@@ -1167,9 +1120,7 @@
       ingestGedcom(text, "loaded from upload");
     });
 
-    // ============================================================
-    // Button wiring
-    // ============================================================
+    // Buttons
     loadSharedBtn.addEventListener("click", loadShared);
     loadLocalBtn.addEventListener("click", loadLocal);
     clearLocalBtn.addEventListener("click", clearLocal);
@@ -1189,27 +1140,17 @@
       if(currentRoot) renderTree();
       saveUi();
     });
-
     filterMode.addEventListener("change", () => {
       if(currentRoot) renderTree();
       saveUi();
     });
-
     modeSelect.addEventListener("change", () => {
       updateModeLabel();
       if(currentRoot) renderTree();
       saveUi();
     });
-
-    rootSelect.addEventListener("change", () => {
-      currentRoot = rootSelect.value;
-      saveUi();
-    });
-
-    depthSelect.addEventListener("change", () => {
-      if(currentRoot) renderTree();
-      saveUi();
-    });
+    rootSelect.addEventListener("change", () => { currentRoot = rootSelect.value; saveUi(); });
+    depthSelect.addEventListener("change", () => { if(currentRoot) renderTree(); saveUi(); });
 
     renderBtn.addEventListener("click", () => {
       if(!currentRoot) return alert("Choose a focus person first.");
@@ -1223,7 +1164,6 @@
     });
 
     findBox.addEventListener("input", () => refreshFindResults(findBox.value));
-
     goToFindBtn.addEventListener("click", () => {
       const id = findResults.value;
       if(!id) return;
@@ -1232,14 +1172,10 @@
       renderTree();
       saveUi();
     });
-
-    clearFindBtn.addEventListener("click", () => {
-      findBox.value = "";
-      refreshFindResults("");
-    });
+    clearFindBtn.addEventListener("click", () => { findBox.value = ""; refreshFindResults(""); });
 
     // ============================================================
-    // Export helpers
+    // EXPORT HELPERS
     // ============================================================
     function downloadBlob(blob, filename){
       const url = URL.createObjectURL(blob);
@@ -1251,7 +1187,6 @@
       a.remove();
       URL.revokeObjectURL(url);
     }
-
     function filenameBase(){
       const title = (treeTitle.value || "family-tree").trim().toLowerCase()
         .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
@@ -1265,12 +1200,10 @@
       const svgString = new XMLSerializer().serializeToString(clone);
       downloadBlob(new Blob([svgString], { type: "image/svg+xml;charset=utf-8" }), filenameBase() + ".svg");
     });
-
     exportPngBtn.addEventListener("click", async () => {
       const canvas = await html2canvas(document.getElementById("exportArea"), { scale: 2, backgroundColor: null });
       canvas.toBlob((blob) => { if(blob) downloadBlob(blob, filenameBase() + ".png"); }, "image/png");
     });
-
     exportPdfBtn.addEventListener("click", async () => {
       const canvas = await html2canvas(document.getElementById("exportArea"), { scale: 2, backgroundColor: "#FFF7E8" });
       const imgData = canvas.toDataURL("image/png");
@@ -1286,34 +1219,22 @@
       pdf.addImage(imgData, "PNG", (pageW - w)/2, (pageH - h)/2, w, h);
       pdf.save(filenameBase() + ".pdf");
     });
-
     exportJsonBtn.addEventListener("click", () => {
-      const payload = {
-        title: treeTitle.value,
-        people: Array.from(GED.individuals.values()),
-        families: Array.from(GED.families.values())
-      };
+      const payload = { title: treeTitle.value, people: Array.from(GED.individuals.values()), families: Array.from(GED.families.values()) };
       downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), filenameBase() + ".json");
     });
-
     exportCsvBtn.addEventListener("click", () => {
       const people = Array.from(GED.individuals.values());
       const headers = ["id","name","surname","sex","birth_date","birth_place","death_date","death_place","famc","fams"];
-      const rows = people.map(p => ([
-        p.id, p.name||"", p.surname||"", p.sex||"",
-        p.birt?.date||"", p.birt?.place||"",
-        p.deat?.date||"", p.deat?.place||"",
-        (p.famc||[]).join("|"),
-        (p.fams||[]).join("|")
-      ]));
-      const csv = [headers, ...rows]
-        .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","))
-        .join("\n");
+      const rows = people.map(p => ([ p.id, p.name||"", p.surname||"", p.sex||"",
+        p.birt?.date||"", p.birt?.place||"", p.deat?.date||"", p.deat?.place||"",
+        (p.famc||[]).join("|"), (p.fams||[]).join("|") ]));
+      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
       downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), filenameBase() + ".csv");
     });
 
     // ============================================================
-    // Boot
+    // BOOT
     // ============================================================
     (function boot(){
       maybeShowWalkthrough();
