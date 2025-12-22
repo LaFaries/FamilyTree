@@ -1,1251 +1,215 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Interactive Family Tree</title>
-
-  <style>
-    :root{
-      --sand:#F6E7CF;
-      --cream:#FFF7E8;
-      --ocean:#0B7285;
-      --reef:#FF6B6B;
-      --plum:#4B2E83;
-      --night:#102A2E;
-      --muted:#51666B;
-
-      --card:rgba(255,255,255,.86);
-      --border:rgba(11,114,133,.25);
-      --shadow:0 18px 40px rgba(0,0,0,.12);
-      --radius:16px;
-
-      --link:rgba(75,46,131,.32);
-      --nodeStroke:rgba(11,114,133,.38);
-      --accent:rgba(255,107,107,.25);
-    }
-
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-      background:
-        radial-gradient(1200px 800px at 18% 10%, rgba(11,114,133,.16), transparent 55%),
-        radial-gradient(900px 650px at 82% 18%, rgba(255,107,107,.16), transparent 55%),
-        radial-gradient(900px 650px at 50% 85%, rgba(75,46,131,.10), transparent 55%),
-        linear-gradient(180deg, var(--sand), var(--cream));
-      color: var(--night);
-    }
-
-    .wrap{ max-width: 1200px; margin: 24px auto 56px; padding: 0 16px; }
-
-    header{
-      background: linear-gradient(135deg, rgba(11,114,133,.10), rgba(255,107,107,.10));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 18px 18px 14px;
-    }
-
-    .topbar{
-      display:flex; gap:14px; align-items:flex-end; flex-wrap: wrap; justify-content: space-between;
-    }
-
-    .brand{ display:flex; flex-direction:column; gap:6px; min-width: 280px; }
-    .brand label{ font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-    .titleRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-
-    #treeTitle{
-      font-size: 20px; font-weight: 850;
-      color: var(--ocean);
-      border: 1px solid rgba(11,114,133,.25);
-      background: rgba(255,255,255,.86);
-      padding: 10px 12px;
-      border-radius: 12px;
-      outline: none;
-      min-width: 280px;
-    }
-    #treeTitle:focus{
-      border-color: rgba(75,46,131,.45);
-      box-shadow: 0 0 0 4px rgba(75,46,131,.10);
-    }
-
-    .controls{ display:flex; gap:10px; align-items:flex-end; flex-wrap: wrap; }
-    .control{ display:flex; flex-direction:column; gap:6px; min-width: 200px; }
-    .control label{
-      font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
-      display:flex; gap:6px; align-items:center;
-    }
-
-    select, input[type="file"], input[type="text"], button{
-      border-radius: 12px;
-      border: 1px solid rgba(11,114,133,.24);
-      background: rgba(255,255,255,.92);
-      padding: 10px 12px;
-      font-size: 14px;
-      color: var(--night);
-      outline: none;
-    }
-    select:focus, input:focus{
-      border-color: rgba(75,46,131,.45);
-      box-shadow: 0 0 0 4px rgba(75,46,131,.10);
-    }
-
-    button{
-      cursor:pointer; font-weight: 800;
-      transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
-      white-space: nowrap;
-    }
-    button:hover{ box-shadow: 0 10px 18px rgba(0,0,0,.10); }
-    button:active{ transform: translateY(1px); }
-
-    .btnPrimary{
-      background: linear-gradient(135deg, var(--ocean), var(--plum));
-      color:white;
-      border: 0;
-    }
-    .btnGhost{ background: rgba(255,255,255,.92); }
-    .btnDanger{
-      background: rgba(255,107,107,.15);
-      color: #8a1e2b;
-      border: 1px solid rgba(255,107,107,.35);
-    }
-
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
-
-    .status{
-      margin-top: 10px;
-      font-size: 13px;
-      color: var(--muted);
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content: space-between;
-    }
-    .status strong{ color: var(--plum); }
-
-    .banner{
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(11,114,133,.18);
-      background: rgba(255,255,255,.72);
-      color: var(--muted);
-      font-size: 13px;
-      display:flex;
-      gap:12px;
-      align-items:center;
-      justify-content: space-between;
-      flex-wrap:wrap;
-    }
-    .banner b{ color: var(--ocean); }
-
-    .canvas{
-      margin-top: 16px;
-      background: rgba(255,255,255,.78);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .hint{
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(11,114,133,.14);
-      color: var(--muted);
-      font-size: 13px;
-      display:flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap:wrap;
-      background: linear-gradient(135deg, rgba(11,114,133,.08), rgba(255,107,107,.08));
-    }
-
-    #treeViewport{
-      width: 100%;
-      height: 72vh;
-      min-height: 520px;
-      background:
-        radial-gradient(circle at 10% 10%, rgba(11,114,133,.08), transparent 30%),
-        radial-gradient(circle at 90% 20%, rgba(255,107,107,.08), transparent 35%),
-        linear-gradient(180deg, rgba(246,231,207,.65), rgba(255,247,232,.95));
-    }
-
-    .tooltip{
-      position: absolute;
-      pointer-events: none;
-      background: rgba(16,42,46,.92);
-      color: white;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      max-width: 340px;
-      box-shadow: 0 18px 35px rgba(0,0,0,.22);
-      border: 1px solid rgba(255,255,255,.15);
-      opacity: 0;
-      transform: translateY(-6px);
-      transition: opacity .12s ease, transform .12s ease;
-      z-index: 50;
-    }
-    .tooltip strong{ color: #ffe1d6; }
-
-    .node-rect{
-      fill: rgba(255,255,255,.92);
-      stroke: var(--nodeStroke);
-      stroke-width: 1.2;
-      rx: 14; ry: 14;
-    }
-    .node-accent{ fill: var(--accent); }
-    .node-name{ font-size: 13px; font-weight: 900; fill: var(--ocean); }
-    .node-meta{ font-size: 11px; fill: rgba(16,42,46,.70); }
-    .link{ fill: none; stroke: var(--link); stroke-width: 2; }
-
-    .help{
-      width: 16px; height: 16px; border-radius: 999px;
-      display:inline-flex; align-items:center; justify-content:center;
-      font-weight: 900; font-size: 11px;
-      color: white;
-      background: linear-gradient(135deg, var(--reef), var(--plum));
-      cursor: help;
-      user-select:none;
-    }
-
-    .walkthrough{
-      margin-top: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(11,114,133,.20);
-      background: rgba(255,255,255,.78);
-      box-shadow: 0 12px 26px rgba(0,0,0,.08);
-      padding: 12px 14px;
-      display:none;
-    }
-    .walkthrough.show{ display:block; }
-    .wtTop{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
-    .wtTitle{ font-weight: 900; color: var(--ocean); }
-    .wtSteps{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; margin-top:10px; }
-    .wtCard{
-      border: 1px solid rgba(11,114,133,.16);
-      border-radius: 14px;
-      background: rgba(255,255,255,.86);
-      padding: 10px 12px;
-    }
-    .wtNum{
-      display:inline-flex; align-items:center; justify-content:center;
-      width: 22px; height: 22px; border-radius: 999px;
-      background: rgba(11,114,133,.14);
-      color: var(--ocean);
-      font-weight: 900;
-      margin-right: 8px;
-      flex: 0 0 auto;
-    }
-    .wtLine{ display:flex; gap:8px; align-items:flex-start; }
-    .wtText b{ color: var(--plum); }
-    .wtHint{ font-size:12px; color: var(--muted); margin-top:6px; }
-    @media (max-width: 980px){ .wtSteps{ grid-template-columns: 1fr; } }
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-
 <body>
-  <div class="wrap">
-    <header>
-      <div class="topbar">
-        <div class="brand">
-          <label>Interactive Family Tree</label>
-          <div class="titleRow">
-            <input id="treeTitle" type="text" value="Interactive Family Tree" />
-          </div>
-        </div>
-
-        <div class="controls">
-          <div class="control">
-            <label data-tip="Load the shared family tree from the cloud, or load your saved copy on this device.">
-              Get the family tree <span class="help" data-tip="Most people will click “Load Shared Tree” first.">?</span>
-            </label>
-            <div class="row">
-              <button class="btnPrimary" id="loadSharedBtn" data-tip="Loads the latest shared GEDCOM from the cloud.">Load Shared Tree</button>
-              <button class="btnGhost" id="loadLocalBtn" data-tip="Loads your saved copy from this device only.">Load My Saved</button>
-              <button class="btnDanger" id="clearLocalBtn" data-tip="Removes your saved copy from this device. The shared cloud tree is not affected.">Clear My Saved</button>
-            </div>
-            <div style="font-size:12px;color:var(--muted)">Shared = cloud (everyone). “My Saved” = this device only.</div>
-          </div>
-
-          <div class="control">
-            <label data-tip="Upload a GEDCOM file from your computer. You can save it to your device, or upload it to the shared cloud (password protected).">
-              Upload a GEDCOM <span class="help" data-tip="GEDCOM is the standard family-tree file format (.ged).">?</span>
-            </label>
-            <input id="gedFile" type="file" accept=".ged,.gedcom,.txt" />
-            <div class="row">
-              <button class="btnPrimary" id="uploadSharedBtn" disabled data-tip="Uploads the shared cloud tree for everyone (requires password prompt).">Update Shared Tree</button>
-              <button class="btnGhost" id="saveLocalBtn" disabled data-tip="Saves your current GEDCOM to this device so you do not need to re-upload next time.">Save to My Device</button>
-            </div>
-          </div>
-
-          <div class="control">
-            <label data-tip="Search by first name or last name, pick a match, then Go to jump and focus the tree.">
-              Find a person <span class="help" data-tip="Tip: type a few letters, then choose the right match from the list.">?</span>
-            </label>
-            <input id="findBox" type="text" placeholder="Type a name..." disabled />
-            <select id="findResults" disabled><option value="">Load data first</option></select>
-            <div class="row">
-              <button class="btnGhost" id="goToFindBtn" disabled data-tip="Sets the focus person and redraws the tree.">Go</button>
-              <button class="btnGhost" id="clearFindBtn" disabled data-tip="Clears the search box.">Clear</button>
-            </div>
-          </div>
-
-          <div class="control">
-            <label data-tip="Filter the tree to a surname (example: Sturrup). Use Highlight first; then Isolate if desired.">
-              Surname filter <span class="help" data-tip="Helps you focus on a single family name.">?</span>
-            </label>
-            <select id="surnameSelect" disabled><option value="">Load data first</option></select>
-            <select id="filterMode" disabled>
-              <option value="none" selected>No filter</option>
-              <option value="fade">Highlight matches</option>
-              <option value="hide">Isolate only matches</option>
-            </select>
-          </div>
-
-          <div class="control">
-            <label data-tip="Choose which direction the tree should expand from your focus person.">
-              View direction <span class="help" data-tip="Ancestors = parents & grandparents. Descendants = children & grandchildren.">?</span>
-            </label>
-            <select id="modeSelect" disabled>
-              <option value="desc" selected>Show descendants (children, grandchildren)</option>
-              <option value="anc">Show ancestors (parents, grandparents)</option>
-            </select>
-          </div>
-
-          <div class="control">
-            <label data-tip="Pick the person you want the tree built around. You can also click any person in the tree to refocus.">
-              Focus person <span class="help" data-tip="This is the person the tree is built around.">?</span>
-            </label>
-            <select id="rootSelect" disabled><option value="">Load data first</option></select>
-          </div>
-
-          <div class="control">
-            <label data-tip="How far back/forward to show. More generations = a larger tree.">
-              Generations to show <span class="help" data-tip="If the tree looks small, increase this. If it looks crowded, reduce it.">?</span>
-            </label>
-            <select id="depthSelect" disabled>
-              <option value="2">2 generations</option>
-              <option value="3">3 generations</option>
-              <option value="4">4 generations</option>
-              <option value="5" selected>5 generations</option>
-              <option value="6">6 generations</option>
-            </select>
-          </div>
-
-          <div class="control">
-            <label data-tip="Build the tree, then you can pan/zoom and export.">
-              Build & view <span class="help" data-tip="Click “Build Tree” after choosing a focus person and generations.">?</span>
-            </label>
-            <div class="row">
-              <button class="btnPrimary" id="renderBtn" disabled data-tip="Draws the tree based on your settings.">Build Tree</button>
-              <button class="btnGhost" id="resetZoomBtn" disabled data-tip="Centers the view and resets zoom.">Center View</button>
-            </div>
-          </div>
-
-          <div class="control">
-            <label data-tip="Download what you see. Use PNG/PDF for sharing; SVG for editing in design apps.">
-              Download / export <span class="help" data-tip="Exports capture the current viewport (what you see on screen).">?</span>
-            </label>
-            <div class="row">
-              <button class="btnGhost" id="exportPngBtn" disabled>PNG</button>
-              <button class="btnGhost" id="exportSvgBtn" disabled>SVG</button>
-              <button class="btnGhost" id="exportPdfBtn" disabled>PDF</button>
-              <button class="btnGhost" id="exportJsonBtn" disabled>JSON</button>
-              <button class="btnGhost" id="exportCsvBtn" disabled>CSV</button>
-            </div>
-          </div>
-        </div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__badge">🌴</div>
+      <div class="brand__text">
+        <div class="brand__title">Interactive Family Tree</div>
+        <div class="brand__sub">Beginner-friendly • Caribbean style • Cloud + device save</div>
       </div>
-
-      <div class="walkthrough" id="walkthrough">
-        <div class="wtTop">
-          <div class="wtTitle">Quick start (first time)</div>
-          <div class="row">
-            <button class="btnGhost" id="showWalkthroughBtn">Show again later</button>
-            <button class="btnPrimary" id="dismissWalkthroughBtn">Got it</button>
-          </div>
-        </div>
-        <div class="wtSteps">
-          <div class="wtCard">
-            <div class="wtLine">
-              <div class="wtNum">1</div>
-              <div class="wtText">
-                <div><b>Load Shared Tree</b> to get the family tree.</div>
-                <div class="wtHint">If you are working offline, use “Load My Saved” instead.</div>
-              </div>
-            </div>
-          </div>
-          <div class="wtCard">
-            <div class="wtLine">
-              <div class="wtNum">2</div>
-              <div class="wtText">
-                <div>Pick a <b>Focus person</b> and choose <b>Generations</b>.</div>
-                <div class="wtHint">You can also use “Find a person” to jump to someone fast.</div>
-              </div>
-            </div>
-          </div>
-          <div class="wtCard">
-            <div class="wtLine">
-              <div class="wtNum">3</div>
-              <div class="wtText">
-                <div>Click <b>Build Tree</b>. Then click any person to refocus.</div>
-                <div class="wtHint">Use PNG/PDF to share the tree with family members.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="banner">
-        <div><b>Tip:</b> Click any person in the tree to refocus instantly. Use “Highlight matches” before “Isolate”.</div>
-        <div style="font-size:12px" id="cloudStatus">Cloud: <span style="color:#8a1e2b;font-weight:800">not loaded</span></div>
-      </div>
-
-      <div class="status">
-        <div>
-          People: <strong id="peopleCount">0</strong> |
-          Families: <strong id="familyCount">0</strong> |
-          Surname filter: <strong id="surnameStatus">All</strong> |
-          View: <strong id="modeStatus">Descendants</strong>
-        </div>
-        <div style="font-size:12px">Pan: drag | Zoom: wheel/trackpad | Click person: refocus</div>
-      </div>
-    </header>
-
-    <div class="canvas" id="exportArea">
-      <div class="hint">
-        <div><strong style="color:var(--ocean);">Help:</strong> Hover the small “?” icons for quick explanations.</div>
-        <div style="font-size:12px">Exports capture the viewport.</div>
-      </div>
-      <svg id="treeViewport"></svg>
     </div>
-  </div>
 
-  <div class="tooltip" id="tooltip"></div>
-
-  <script>
-    // ============================================================
-    // CLOUD ENDPOINTS (Netlify Functions)
-    // ============================================================
-    const CLOUD_GET_URL = "/.netlify/functions/getTree";
-    const CLOUD_UPLOAD_URL = "/.netlify/functions/uploadTree";
-
-    // Local storage keys
-    const LOCAL_KEY_TEXT = "ift:gedcomText:v2";
-    const LOCAL_KEY_UI   = "ift:ui:v2";
-    const LOCAL_KEY_WT   = "ift:walkthroughDismissed:v1";
-
-    // ============================================================
-    // TOOLTIP (UI HELP)
-    // ============================================================
-    const uiTip = document.getElementById("tooltip");
-    function escapeHtml(str){
-      return String(str).replace(/[&<>"']/g, s => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-      }[s]));
-    }
-    function showUiTip(evt){
-      const t = evt.target?.getAttribute?.("data-tip");
-      if(!t) return;
-      uiTip.innerHTML = `<strong>Tip</strong><br/>${escapeHtml(t)}`;
-      uiTip.style.left = (evt.pageX + 14) + "px";
-      uiTip.style.top  = (evt.pageY + 14) + "px";
-      uiTip.style.opacity = "1";
-      uiTip.style.transform = "translateY(0)";
-    }
-    function hideUiTip(){
-      uiTip.style.opacity = "0";
-      uiTip.style.transform = "translateY(-6px)";
-    }
-    document.addEventListener("mouseover", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) showUiTip(e); });
-    document.addEventListener("mousemove", (e)=>{ if(uiTip.style.opacity==="1") { uiTip.style.left=(e.pageX+14)+"px"; uiTip.style.top=(e.pageY+14)+"px"; } });
-    document.addEventListener("mouseout", (e)=>{ if(e.target?.hasAttribute?.("data-tip")) hideUiTip(); });
-
-    // ============================================================
-    // HELPERS
-    // ============================================================
-    function safeJsonParse(text){
-      try { return JSON.parse(text); } catch { return null; }
-    }
-    function setCloudStatus(label){
-      document.getElementById("cloudStatus").innerHTML =
-        `Cloud: <span style="color:#1f7a3b;font-weight:900">${escapeHtml(label)}</span>`;
-    }
-    function setCloudStatusError(label){
-      document.getElementById("cloudStatus").innerHTML =
-        `Cloud: <span style="color:#8a1e2b;font-weight:900">${escapeHtml(label)}</span>`;
-    }
-
-    // ============================================================
-    // GEDCOM PARSING
-    // ============================================================
-    function parseGedcom(text){
-      const lines = text.split(/\r?\n/);
-      const individuals = new Map();
-      const families = new Map();
-      let current=null, currentType=null, currentEvent=null;
-
-      const ensurePerson=(id)=>{
-        if(!individuals.has(id)){
-          individuals.set(id,{ id, name:"Unknown", nameRaw:"", surname:"", sex:"",
-            birt:{date:"",place:""}, deat:{date:"",place:""}, famc:[], fams:[] });
-        }
-        return individuals.get(id);
-      };
-      const ensureFamily=(id)=>{ if(!families.has(id)) families.set(id,{id,husb:"",wife:"",chil:[]}); return families.get(id); };
-
-      function extractSurnameFromName(rawName){
-        const m = String(rawName||"").match(/\/([^\/]+)\//);
-        if(m && m[1]) return m[1].trim();
-        const cleaned = String(rawName||"").replace(/\//g,"").trim();
-        const parts = cleaned.split(/\s+/).filter(Boolean);
-        return (parts.length ? parts[parts.length-1] : "").trim();
-      }
-
-      for(const raw of lines){
-        const line = raw.trim();
-        if(!line) continue;
-
-        const parts = line.split(" ");
-        const level = parts[0];
-        const p1 = parts[1] || "";
-        const p2 = parts[2] || "";
-
-        if(level === "0"){
-          currentEvent = null; current=null; currentType=null;
-          if(p1.startsWith("@") && p1.endsWith("@")){
-            const id = p1, tag = p2;
-            if(tag === "INDI"){ currentType="INDI"; current=ensurePerson(id); }
-            else if(tag === "FAM"){ currentType="FAM"; current=ensureFamily(id); }
-          }
-          continue;
-        }
-
-        const tag = p1;
-        const value = parts.slice(2).join(" ");
-
-        if(currentType === "INDI" && current){
-          if(tag === "NAME"){
-            current.nameRaw = value.trim();
-            current.surname = extractSurnameFromName(value);
-            current.name = value.replace(/\//g,"").trim() || current.name;
-          } else if(tag === "SEX"){
-            current.sex = value.trim();
-          } else if(tag === "BIRT" || tag === "DEAT"){
-            currentEvent = tag;
-          } else if(tag === "DATE" && currentEvent){
-            if(currentEvent === "BIRT" && !current.birt.date) current.birt.date = value.trim();
-            if(currentEvent === "DEAT" && !current.deat.date) current.deat.date = value.trim();
-          } else if(tag === "PLAC" && currentEvent){
-            if(currentEvent === "BIRT" && !current.birt.place) current.birt.place = value.trim();
-            if(currentEvent === "DEAT" && !current.deat.place) current.deat.place = value.trim();
-          } else if(tag === "FAMC"){
-            current.famc.push(value.trim());
-          } else if(tag === "FAMS"){
-            current.fams.push(value.trim());
-          }
-        }
-
-        if(currentType === "FAM" && current){
-          if(tag === "HUSB") current.husb = value.trim();
-          if(tag === "WIFE") current.wife = value.trim();
-          if(tag === "CHIL") current.chil.push(value.trim());
-        }
-      }
-      return { individuals, families };
-    }
-
-    const norm = (s)=>String(s||"").trim().toLowerCase();
-    function surnameMatches(person, filter){
-      const wantRaw = norm(filter);
-      if(!wantRaw) return true;
-      if(!person) return false;
-
-      const want = wantRaw.endsWith("s") ? wantRaw.slice(0,-1) : wantRaw;
-      const wantAlt = wantRaw.endsWith("s") ? wantRaw : (wantRaw + "s");
-
-      const surname = norm(person.surname || "");
-      const full = norm(person.name || "");
-      const cands = [surname, full].filter(Boolean);
-
-      return cands.some(c =>
-        c === wantRaw || c === want || c === wantAlt ||
-        c.includes(wantRaw) || c.includes(want) || c.includes(wantAlt)
-      );
-    }
-
-    function buildDescTree(rootId, data, maxDepth, surnameFilter){
-      const { individuals, families } = data;
-      const seen = new Set();
-
-      function buildNode(personId, depth){
-        const p = individuals.get(personId);
-        const base = {
-          id: personId,
-          name: p?.name || "Unknown",
-          surname: p?.surname || "",
-          sex: p?.sex || "",
-          birt: p?.birt || {date:"",place:""},
-          deat: p?.deat || {date:"",place:""},
-          _match: surnameMatches(p, surnameFilter),
-          children: []
-        };
-        if(depth >= maxDepth) return base;
-
-        const key = personId + "::" + depth;
-        if(seen.has(key)) return base;
-        seen.add(key);
-
-        for(const famId of (p?.fams || [])){
-          const fam = families.get(famId);
-          if(!fam) continue;
-          for(const childId of (fam.chil || [])){
-            base.children.push(buildNode(childId, depth + 1));
-          }
-        }
-        return base;
-      }
-      return buildNode(rootId, 1);
-    }
-
-    function buildAncTree(rootId, data, maxDepth, surnameFilter){
-      const { individuals, families } = data;
-      const seen = new Set();
-
-      function getParents(personId){
-        const p = individuals.get(personId);
-        const out = [];
-        for(const famId of (p?.famc || [])){
-          const fam = families.get(famId);
-          if(!fam) continue;
-          if(fam.husb) out.push(fam.husb);
-          if(fam.wife) out.push(fam.wife);
-        }
-        return Array.from(new Set(out));
-      }
-
-      function buildNode(personId, depth){
-        const p = individuals.get(personId);
-        const base = {
-          id: personId,
-          name: p?.name || "Unknown",
-          surname: p?.surname || "",
-          sex: p?.sex || "",
-          birt: p?.birt || {date:"",place:""},
-          deat: p?.deat || {date:"",place:""},
-          _match: surnameMatches(p, surnameFilter),
-          children: []
-        };
-        if(depth >= maxDepth) return base;
-
-        const key = personId + "::" + depth;
-        if(seen.has(key)) return base;
-        seen.add(key);
-
-        for(const pid of getParents(personId)){
-          base.children.push(buildNode(pid, depth + 1));
-        }
-        return base;
-      }
-      return buildNode(rootId, 1);
-    }
-
-    // ============================================================
-    // APP STATE
-    // ============================================================
-    let GED = { individuals:new Map(), families:new Map() };
-    let currentRoot = "";
-    let zoomBehavior = null;
-
-    const svg = d3.select("#treeViewport");
-    const tooltip = document.getElementById("tooltip");
-
-    function yearFrom(s){
-      const m = String(s||"").match(/\b(16|17|18|19|20)\d{2}\b/);
-      return m ? m[0] : "";
-    }
-    function clearSvg(){ svg.selectAll("*").remove(); }
-
-    function showTooltip(event, d){
-      if(event.target?.hasAttribute?.("data-tip")) return;
-      const p = d.data;
-      const lines = [
-        `<strong>${escapeHtml(p.name || "Unknown")}</strong>`,
-        p.surname ? `Surname: ${escapeHtml(p.surname)}` : "",
-        (p.birt?.date || p.birt?.place) ? `Birth: ${escapeHtml([p.birt?.date, p.birt?.place].filter(Boolean).join(" — "))}` : "",
-        (p.deat?.date || p.deat?.place) ? `Death: ${escapeHtml([p.deat?.date, p.deat?.place].filter(Boolean).join(" — "))}` : "",
-        `ID: ${escapeHtml(p.id || "")}`
-      ].filter(Boolean);
-
-      tooltip.innerHTML = lines.join("<br/>");
-      tooltip.style.left = (event.pageX + 14) + "px";
-      tooltip.style.top  = (event.pageY + 14) + "px";
-      tooltip.style.opacity = "1";
-      tooltip.style.transform = "translateY(0)";
-    }
-    function hideTooltip(){
-      tooltip.style.opacity = "0";
-      tooltip.style.transform = "translateY(-6px)";
-    }
-
-    // ============================================================
-    // DOM REFS
-    // ============================================================
-    const gedFile = document.getElementById("gedFile");
-    const treeTitle = document.getElementById("treeTitle");
-    const rootSelect = document.getElementById("rootSelect");
-    const depthSelect = document.getElementById("depthSelect");
-    const renderBtn = document.getElementById("renderBtn");
-    const surnameSelect = document.getElementById("surnameSelect");
-    const modeSelect = document.getElementById("modeSelect");
-    const filterMode = document.getElementById("filterMode");
-    const findBox = document.getElementById("findBox");
-    const findResults = document.getElementById("findResults");
-    const goToFindBtn = document.getElementById("goToFindBtn");
-    const clearFindBtn = document.getElementById("clearFindBtn");
-    const resetZoomBtn = document.getElementById("resetZoomBtn");
-    const uploadSharedBtn = document.getElementById("uploadSharedBtn");
-    const saveLocalBtn = document.getElementById("saveLocalBtn");
-    const loadSharedBtn = document.getElementById("loadSharedBtn");
-    const loadLocalBtn = document.getElementById("loadLocalBtn");
-    const clearLocalBtn = document.getElementById("clearLocalBtn");
-
-    const exportPngBtn = document.getElementById("exportPngBtn");
-    const exportSvgBtn = document.getElementById("exportSvgBtn");
-    const exportPdfBtn = document.getElementById("exportPdfBtn");
-    const exportJsonBtn = document.getElementById("exportJsonBtn");
-    const exportCsvBtn = document.getElementById("exportCsvBtn");
-
-    const walkthrough = document.getElementById("walkthrough");
-    const dismissWalkthroughBtn = document.getElementById("dismissWalkthroughBtn");
-    const showWalkthroughBtn = document.getElementById("showWalkthroughBtn");
-
-    function maybeShowWalkthrough(){
-      const dismissed = localStorage.getItem(LOCAL_KEY_WT);
-      if(!dismissed) walkthrough.classList.add("show");
-    }
-    dismissWalkthroughBtn.addEventListener("click", ()=>{
-      localStorage.setItem(LOCAL_KEY_WT, "1");
-      walkthrough.classList.remove("show");
-    });
-    showWalkthroughBtn.addEventListener("click", ()=>{ walkthrough.classList.add("show"); });
-
-    function enableControls(){
-      rootSelect.disabled = false;
-      depthSelect.disabled = false;
-      renderBtn.disabled = false;
-      modeSelect.disabled = false;
-      surnameSelect.disabled = false;
-      filterMode.disabled = false;
-
-      findBox.disabled = false;
-      findResults.disabled = false;
-      goToFindBtn.disabled = false;
-      clearFindBtn.disabled = false;
-
-      uploadSharedBtn.disabled = false;
-      saveLocalBtn.disabled = false;
-    }
-
-    function setSurnameStatusLabel(){
-      const val = surnameSelect.value;
-      document.getElementById("surnameStatus").textContent = val ? val : "All";
-    }
-    function updateModeLabel(){
-      document.getElementById("modeStatus").textContent = (modeSelect.value === "anc") ? "Ancestors" : "Descendants";
-    }
-
-    function setStatusCounts(){
-      document.getElementById("peopleCount").textContent = GED.individuals.size;
-      document.getElementById("familyCount").textContent = GED.families.size;
-
-      const hasSome = GED.individuals.size > 0;
-      exportPngBtn.disabled = !hasSome;
-      exportSvgBtn.disabled = !hasSome;
-      exportPdfBtn.disabled = !hasSome;
-      exportJsonBtn.disabled = !hasSome;
-      exportCsvBtn.disabled = !hasSome;
-    }
-
-    function populateSurnameDropdown(){
-      const surnames = new Set();
-      for(const p of GED.individuals.values()){
-        const s = String(p.surname || "").trim();
-        if(s) surnames.add(s);
-      }
-      const list = Array.from(surnames).sort((a,b)=>a.localeCompare(b));
-
-      surnameSelect.innerHTML = "";
-      const all = document.createElement("option");
-      all.value = "";
-      all.textContent = "All surnames";
-      surnameSelect.appendChild(all);
-
-      for(const s of list){
-        const opt = document.createElement("option");
-        opt.value = s;
-        opt.textContent = s;
-        surnameSelect.appendChild(opt);
-      }
-      setSurnameStatusLabel();
-    }
-
-    function populateRootDropdown(){
-      const surnameFilter = surnameSelect.value || "";
-      const people = Array.from(GED.individuals.values())
-        .filter(p => surnameMatches(p, surnameFilter))
-        .map(p => ({ id:p.id, name:p.name || "Unknown" }))
-        .sort((a,b)=>a.name.localeCompare(b.name));
-
-      rootSelect.innerHTML = "";
-      const opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = people.length ? "Choose a focus person..." : "No matches for this surname";
-      rootSelect.appendChild(opt0);
-
-      for(const p of people){
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = `${p.name} — ${p.id}`;
-        rootSelect.appendChild(opt);
-      }
-
-      if(people.length){
-        rootSelect.disabled = false;
-        if(!currentRoot || !GED.individuals.has(currentRoot) || !people.some(x=>x.id===currentRoot)){
-          currentRoot = people[0].id;
-        }
-        rootSelect.value = currentRoot;
-      } else {
-        rootSelect.disabled = true;
-        currentRoot = "";
-      }
-    }
-
-    let findIndex = [];
-    function rebuildFindIndex(){
-      findIndex = Array.from(GED.individuals.values())
-        .map(p => ({ id:p.id, name:p.name || "Unknown", surname:p.surname || "" }))
-        .sort((a,b)=>a.name.localeCompare(b.name));
-      refreshFindResults("");
-    }
-    function refreshFindResults(query){
-      const q = norm(query);
-      const matches = !q ? findIndex.slice(0,50)
-        : findIndex.filter(p => norm(p.name).includes(q) || norm(p.surname).includes(q)).slice(0,50);
-
-      findResults.innerHTML = "";
-      const opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = matches.length ? "Choose a person..." : "No matches";
-      findResults.appendChild(opt0);
-
-      for(const m of matches){
-        const opt = document.createElement("option");
-        opt.value = m.id;
-        opt.textContent = `${m.name} — ${m.id}`;
-        findResults.appendChild(opt);
-      }
-    }
-
-    function saveUi(){
-      const ui = {
-        title: treeTitle.value || "Interactive Family Tree",
-        mode: modeSelect.value,
-        depth: depthSelect.value,
-        root: currentRoot || "",
-        surname: surnameSelect.value || "",
-        filterMode: filterMode.value || "none"
-      };
-      localStorage.setItem(LOCAL_KEY_UI, JSON.stringify(ui));
-    }
-
-    function restoreUi(){
-      const raw = localStorage.getItem(LOCAL_KEY_UI);
-      if(!raw) return;
-      try{
-        const ui = JSON.parse(raw);
-        if(ui.title) treeTitle.value = ui.title;
-        if(ui.mode) modeSelect.value = ui.mode;
-        if(ui.depth) depthSelect.value = ui.depth;
-        if(ui.filterMode) filterMode.value = ui.filterMode;
-
-        if(ui.surname && Array.from(surnameSelect.options).some(o=>o.value===ui.surname)){
-          surnameSelect.value = ui.surname;
-          setSurnameStatusLabel();
-        }
-        populateRootDropdown();
-
-        if(ui.root && GED.individuals.has(ui.root)){
-          currentRoot = ui.root;
-          rootSelect.value = ui.root;
-        }
-      }catch(e){}
-    }
-
-    function ingestGedcom(text, cloudLabel){
-      window.__lastGedText = text;
-      GED = parseGedcom(text);
-
-      enableControls();
-      populateSurnameDropdown();
-      populateRootDropdown();
-      rebuildFindIndex();
-      updateModeLabel();
-      setStatusCounts();
-
-      setCloudStatus(cloudLabel || "loaded");
-      restoreUi();
-    }
-
-    // ============================================================
-    // CLOUD: loadShared / uploadShared (SINGLE DEFINITIONS)
-    // Supports multiple response/request shapes to avoid mismatches.
-    // ============================================================
-    async function loadShared(){
-      try{
-        const res = await fetch(CLOUD_GET_URL, { cache: "no-store" });
-        const raw = await res.text();
-        const payload = safeJsonParse(raw);
-
-        if(!res.ok || !payload?.ok){
-          setCloudStatusError("empty");
-          return alert(
-            "Could not load shared tree.\n\n" +
-            (payload?.message || `HTTP ${res.status}\n${raw.slice(0, 200)}`)
-          );
-        }
-
-        const gedText = payload.gedText || payload.tree?.gedText || "";
-        const meta = payload.meta || payload.tree?.meta || {};
-
-        if(!gedText){
-          setCloudStatusError("empty");
-          return alert("No shared GEDCOM uploaded yet.");
-        }
-
-        localStorage.setItem(LOCAL_KEY_TEXT, gedText);
-        ingestGedcom(gedText, meta?.label || meta?.note || "shared tree loaded");
-      }catch(e){
-        setCloudStatusError("error");
-        alert("Could not load shared tree.\n\n" + (e?.message || "Unknown error"));
-      }
-    }
-
-    async function uploadShared(){
-      const gedText = window.__lastGedText || "";
-      if(!gedText) return alert("Load or upload a GEDCOM first.");
-
-      const adminKey = prompt("Password required to update the shared tree:");
-      if(!adminKey) return;
-
-      const note = prompt("Optional note for your records (not shown to others):") || "";
-      const meta = { note, label: "shared tree updated", uploadedAt: new Date().toISOString() };
-
-      // Send both shapes for backend compatibility
-      const body = {
-        adminKey,
-        gedText,
-        meta,
-        tree: { gedText, meta }
-      };
-
-      try{
-        const res = await fetch(CLOUD_UPLOAD_URL, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(body)
-        });
-
-        const raw = await res.text();
-        const payload = safeJsonParse(raw);
-
-        if(!res.ok || !payload?.ok){
-          return alert(
-            "Upload failed.\n\n" +
-            (payload?.message || `HTTP ${res.status}\n${raw.slice(0, 200)}`)
-          );
-        }
-
-        // optional local cache
-        localStorage.setItem(LOCAL_KEY_TEXT, gedText);
-        alert("Shared tree updated for everyone.");
-        setCloudStatus("shared tree updated");
-      }catch(e){
-        alert("Upload failed.\n\n" + (e?.message || "Unknown error"));
-      }
-    }
-
-    // ============================================================
-    // LOCAL
-    // ============================================================
-    function loadLocal(){
-      const t = localStorage.getItem(LOCAL_KEY_TEXT);
-      if(!t) return alert("No saved copy on this device yet.");
-      ingestGedcom(t, "loaded from your device");
-    }
-
-    function clearLocal(){
-      localStorage.removeItem(LOCAL_KEY_TEXT);
-      localStorage.removeItem(LOCAL_KEY_UI);
-      alert("Cleared from this device.");
-      location.reload();
-    }
-
-    // ============================================================
-    // RENDER TREE
-    // ============================================================
-    function renderTree(){
-      if(!currentRoot) return;
-
-      const depth = parseInt(depthSelect.value, 10);
-      const mode = modeSelect.value;
-      const surname = surnameSelect.value || "";
-      const fm = filterMode.value;
-
-      const treeData = (mode === "anc")
-        ? buildAncTree(currentRoot, GED, depth, surname)
-        : buildDescTree(currentRoot, GED, depth, surname);
-
-      clearSvg();
-
-      const width = document.getElementById("treeViewport").clientWidth;
-      const height = document.getElementById("treeViewport").clientHeight;
-
-      const g = svg.append("g").attr("class","viewportG");
-
-      const root = d3.hierarchy(treeData);
-      const treeLayout = d3.tree().nodeSize([110, 260]);
-      treeLayout(root);
-
-      const nodes = root.descendants();
-      const minX = d3.min(nodes, d => d.x);
-      const maxX = d3.max(nodes, d => d.x);
-      const minY = d3.min(nodes, d => d.y);
-      const maxY = d3.max(nodes, d => d.y);
-
-      const pad = 80;
-      const treeW = (maxY - minY) + pad*2;
-      const treeH = (maxX - minX) + pad*2;
-
-      const scale = Math.min(width / treeW, height / treeH, 1);
-      const tx = (width - treeW * scale) / 2 - (minY - pad) * scale;
-      const ty = (height - treeH * scale) / 2 - (minX - pad) * scale;
-
-      g.selectAll(".link")
-        .data(root.links())
-        .enter()
-        .append("path")
-        .attr("class","link")
-        .attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x));
-
-      const node = g.selectAll(".node")
-        .data(nodes)
-        .enter()
-        .append("g")
-        .attr("class","node")
-        .attr("transform", d => `translate(${d.y},${d.x})`)
-        .style("opacity", d => {
-          if(fm === "none" || !surname) return 1;
-          const isMatch = !!d.data._match;
-          if(fm === "hide") return isMatch ? 1 : 0;
-          return isMatch ? 1 : 0.22;
-        })
-        .on("mousemove", (event, d) => showTooltip(event, d))
-        .on("mouseleave", hideTooltip)
-        .on("click", (event, d) => {
-          if(!d?.data?.id) return;
-          currentRoot = d.data.id;
-          rootSelect.value = currentRoot;
-          renderTree();
-          saveUi();
-        });
-
-      const cardW = 220;
-      const cardH = 70;
-
-      node.append("g").attr("class","node-card");
-      node.select(".node-card").append("rect")
-        .attr("class","node-rect")
-        .attr("x", -cardW/2).attr("y", -cardH/2)
-        .attr("width", cardW).attr("height", cardH);
-
-      node.select(".node-card").append("rect")
-        .attr("class","node-accent")
-        .attr("x", -cardW/2).attr("y", -cardH/2)
-        .attr("width", 10).attr("height", cardH)
-        .attr("rx", 14).attr("ry", 14);
-
-      node.append("text")
-        .attr("class","node-name")
-        .attr("text-anchor","middle")
-        .attr("y", -6)
-        .text(d => d.data.name || "Unknown");
-
-      node.append("text")
-        .attr("class","node-meta")
-        .attr("text-anchor","middle")
-        .attr("y", 16)
-        .text(d => {
-          const by = yearFrom(d.data.birt?.date);
-          const dy = yearFrom(d.data.deat?.date);
-          return [by ? `b. ${by}` : "", dy ? `d. ${dy}` : ""].filter(Boolean).join(" · ");
-        });
-
-      zoomBehavior = d3.zoom()
-        .scaleExtent([0.2, 2.5])
-        .on("zoom", (event) => g.attr("transform", event.transform));
-
-      svg.call(zoomBehavior);
-      svg.call(zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
-
-      resetZoomBtn.disabled = false;
-      setStatusCounts();
-      updateModeLabel();
-    }
-
-    // ============================================================
-    // FILE UPLOAD (LOCAL INGEST)
-    // ============================================================
-    gedFile.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      if(!file) return;
-      const text = await file.text();
-      ingestGedcom(text, "loaded from upload");
-    });
-
-    // Buttons
-    loadSharedBtn.addEventListener("click", loadShared);
-    loadLocalBtn.addEventListener("click", loadLocal);
-    clearLocalBtn.addEventListener("click", clearLocal);
-
-    uploadSharedBtn.addEventListener("click", uploadShared);
-    saveLocalBtn.addEventListener("click", () => {
-      const t = window.__lastGedText || "";
-      if(!t) return alert("No GEDCOM loaded.");
-      localStorage.setItem(LOCAL_KEY_TEXT, t);
-      saveUi();
-      alert("Saved to your device.");
-    });
-
-    surnameSelect.addEventListener("change", () => {
-      setSurnameStatusLabel();
-      populateRootDropdown();
-      if(currentRoot) renderTree();
-      saveUi();
-    });
-    filterMode.addEventListener("change", () => {
-      if(currentRoot) renderTree();
-      saveUi();
-    });
-    modeSelect.addEventListener("change", () => {
-      updateModeLabel();
-      if(currentRoot) renderTree();
-      saveUi();
-    });
-    rootSelect.addEventListener("change", () => { currentRoot = rootSelect.value; saveUi(); });
-    depthSelect.addEventListener("change", () => { if(currentRoot) renderTree(); saveUi(); });
-
-    renderBtn.addEventListener("click", () => {
-      if(!currentRoot) return alert("Choose a focus person first.");
-      renderTree();
-      saveUi();
-    });
-
-    resetZoomBtn.addEventListener("click", () => {
-      if(!zoomBehavior) return;
-      svg.transition().duration(250).call(zoomBehavior.transform, d3.zoomIdentity);
-    });
-
-    findBox.addEventListener("input", () => refreshFindResults(findBox.value));
-    goToFindBtn.addEventListener("click", () => {
-      const id = findResults.value;
-      if(!id) return;
-      currentRoot = id;
-      rootSelect.value = id;
-      renderTree();
-      saveUi();
-    });
-    clearFindBtn.addEventListener("click", () => { findBox.value = ""; refreshFindResults(""); });
-
-    // ============================================================
-    // EXPORT HELPERS
-    // ============================================================
-    function downloadBlob(blob, filename){
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-    function filenameBase(){
-      const title = (treeTitle.value || "family-tree").trim().toLowerCase()
-        .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-      return title || "family-tree";
-    }
-
-    exportSvgBtn.addEventListener("click", () => {
-      const svgEl = document.getElementById("treeViewport");
-      const clone = svgEl.cloneNode(true);
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      const svgString = new XMLSerializer().serializeToString(clone);
-      downloadBlob(new Blob([svgString], { type: "image/svg+xml;charset=utf-8" }), filenameBase() + ".svg");
-    });
-    exportPngBtn.addEventListener("click", async () => {
-      const canvas = await html2canvas(document.getElementById("exportArea"), { scale: 2, backgroundColor: null });
-      canvas.toBlob((blob) => { if(blob) downloadBlob(blob, filenameBase() + ".png"); }, "image/png");
-    });
-    exportPdfBtn.addEventListener("click", async () => {
-      const canvas = await html2canvas(document.getElementById("exportArea"), { scale: 2, backgroundColor: "#FFF7E8" });
-      const imgData = canvas.toDataURL("image/png");
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const s = Math.min(pageW / canvas.width, pageH / canvas.height);
-
-      const w = canvas.width * s;
-      const h = canvas.height * s;
-      pdf.addImage(imgData, "PNG", (pageW - w)/2, (pageH - h)/2, w, h);
-      pdf.save(filenameBase() + ".pdf");
-    });
-    exportJsonBtn.addEventListener("click", () => {
-      const payload = { title: treeTitle.value, people: Array.from(GED.individuals.values()), families: Array.from(GED.families.values()) };
-      downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), filenameBase() + ".json");
-    });
-    exportCsvBtn.addEventListener("click", () => {
-      const people = Array.from(GED.individuals.values());
-      const headers = ["id","name","surname","sex","birth_date","birth_place","death_date","death_place","famc","fams"];
-      const rows = people.map(p => ([ p.id, p.name||"", p.surname||"", p.sex||"",
-        p.birt?.date||"", p.birt?.place||"", p.deat?.date||"", p.deat?.place||"",
-        (p.famc||[]).join("|"), (p.fams||[]).join("|") ]));
-      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-      downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), filenameBase() + ".csv");
-    });
-
-    // ============================================================
-    // BOOT
-    // ============================================================
-    (function boot(){
-      maybeShowWalkthrough();
-
-      const t = localStorage.getItem(LOCAL_KEY_TEXT);
-      if(t){
-        ingestGedcom(t, "auto-loaded from your device");
-      } else {
-        setCloudStatusError("not loaded");
-      }
-    })();
-  </script>
+    <button class="btn btn-ghost" id="btnHelp" type="button">Help</button>
+  </header>
+
+  <main class="wrap">
+    <!-- Onboarding / Stepper -->
+    <section class="card card--hero">
+      <div class="hero">
+        <div>
+          <h1>Start Here</h1>
+          <p class="muted">
+            Follow these steps in order. Buttons unlock as you go.
+            “Shared Tree” is the cloud copy. “My Saved” is only on this device.
+          </p>
+        </div>
+
+        <div class="stepper" aria-label="Setup steps">
+          <div class="step" id="step1">
+            <div class="step__badge">1</div>
+            <div class="step__text">
+              <div class="step__title">Choose a GEDCOM file</div>
+              <div class="step__hint">Example: <code>.ged</code> file exported from Ancestry/FamilySearch.</div>
+            </div>
+          </div>
+          <div class="step" id="step2">
+            <div class="step__badge">2</div>
+            <div class="step__text">
+              <div class="step__title">Preview & confirm</div>
+              <div class="step__hint">We show counts and a sample before uploading.</div>
+            </div>
+          </div>
+          <div class="step" id="step3">
+            <div class="step__badge">3</div>
+            <div class="step__text">
+              <div class="step__title">Save / Share</div>
+              <div class="step__hint">Save to device or update the shared (cloud) tree.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions -->
+    <section class="grid">
+      <section class="card">
+        <div class="card__titleRow">
+          <h2>Get the Family Tree</h2>
+          <span class="pill">Cloud + Device</span>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" id="btnLoadShared" type="button">
+            Load Shared Tree
+          </button>
+
+          <button class="btn" id="btnLoadLocal" type="button">
+            Load My Saved (This Device)
+          </button>
+
+          <button class="btn btn-danger" id="btnClearLocal" type="button">
+            Clear My Saved
+          </button>
+        </div>
+
+        <p class="muted small">
+          Tip: Use <strong>Load Shared Tree</strong> first if you want the latest cloud copy.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="card__titleRow">
+          <h2>Upload a GEDCOM</h2>
+          <span class="pill pill--sun">Step 1</span>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Choose your GEDCOM file</span>
+          <input id="fileInput" type="file" accept=".ged,.txt" />
+          <span class="field__help">If your file is huge, this may take a moment.</span>
+        </label>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="btnPreview" type="button" disabled>
+            Preview File
+          </button>
+        </div>
+      </section>
+    </section>
+
+    <!-- Preview -->
+    <section class="card" id="previewCard" hidden>
+      <div class="card__titleRow">
+        <h2>Preview</h2>
+        <span class="pill pill--ocean">Step 2</span>
+      </div>
+
+      <div class="previewGrid">
+        <div class="previewBox">
+          <div class="previewBox__title">Counts</div>
+          <div class="previewBox__body" id="counts"></div>
+        </div>
+
+        <div class="previewBox">
+          <div class="previewBox__title">Sample (first people)</div>
+          <pre class="code" id="sample"></pre>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" id="btnUploadShared" type="button" disabled>
+          Update Shared Tree (Cloud)
+        </button>
+
+        <button class="btn" id="btnSaveLocal" type="button" disabled>
+          Save to My Device
+        </button>
+
+        <button class="btn btn-ghost" id="btnCancelPreview" type="button">
+          Cancel
+        </button>
+      </div>
+
+      <p class="muted small">
+        Cloud save updates the shared tree for everyone who loads the shared copy.
+      </p>
+    </section>
+
+    <!-- Current Status / Exports -->
+    <section class="card">
+      <div class="card__titleRow">
+        <h2>Current Tree</h2>
+        <span class="pill pill--palm" id="treeSourcePill">Not loaded</span>
+      </div>
+
+      <div class="statusRow">
+        <div class="statusItem">
+          <div class="statusItem__label">People</div>
+          <div class="statusItem__value" id="statPeople">—</div>
+        </div>
+        <div class="statusItem">
+          <div class="statusItem__label">Families</div>
+          <div class="statusItem__value" id="statFamilies">—</div>
+        </div>
+        <div class="statusItem">
+          <div class="statusItem__label">Surnames</div>
+          <div class="statusItem__value" id="statSurnames">—</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="btnExportJson" type="button" disabled>Export JSON</button>
+        <button class="btn" id="btnExportCsv" type="button" disabled>Export CSV</button>
+        <button class="btn btn-danger" id="btnClearLoaded" type="button" disabled>Clear Loaded Tree</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Help Drawer -->
+  <dialog class="help" id="helpDialog">
+    <div class="help__header">
+      <h3>How to use this app (Beginner guide)</h3>
+      <button class="btn btn-ghost" id="btnCloseHelp" type="button">Close</button>
+    </div>
+
+    <div class="help__content">
+      <ol>
+        <li><strong>Load Shared Tree</strong> to see what’s already in the cloud.</li>
+        <li>To add new data: <strong>Choose File → Preview → Update Shared Tree</strong>.</li>
+        <li><strong>Save to My Device</strong> keeps a copy only on this computer.</li>
+        <li>If something looks wrong, click <strong>Cancel</strong> during preview.</li>
+      </ol>
+
+      <div class="callout">
+        <div class="callout__title">Troubleshooting</div>
+        <ul>
+          <li>If upload fails: check Netlify env vars and redeploy.</li>
+          <li>If shared load returns empty: shared row may not exist yet—upload once.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Confirm Modal -->
+  <dialog class="confirm" id="confirmDialog">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmText" class="muted"></p>
+    <div class="actions actions--right">
+      <button class="btn btn-ghost" id="confirmCancel" type="button">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk" type="button">Yes, continue</button>
+    </div>
+  </dialog>
+
+  <script src="./app.js"></script>
 </body>
 </html>
