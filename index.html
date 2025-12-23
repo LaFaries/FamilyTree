@@ -555,172 +555,130 @@
     }
 
     // ========= GEDCOM PARSER =========
-    function parseGedcom(text) {
-      const lines = text.split(/\\r?\\n/);
-      const people = [];
-      const families = [];
+  function parseGedcom(text) {
+  // Remove BOM if present
+  text = text.replace(/^\uFEFF/, "");
 
-      let current = null;
-      let currentType = null;
+  const lines = text.split(/\r?\n/);
+  const people = [];
+  const families = [];
 
-      function commit() {
-        if (!current) return;
-        if (currentType === "INDI") people.push(current);
-        if (currentType === "FAM") families.push(current);
-        current = null;
-        currentType = null;
-      }
+  let current = null;
+  let currentType = null;
 
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) continue;
+  function commit() {
+    if (!current) return;
+    if (currentType === "INDI") people.push(current);
+    if (currentType === "FAM") families.push(current);
+    current = null;
+    currentType = null;
+  }
 
-        const m = line.match(/^(\\d+)\\s+(@[^@]+@)?\\s*([A-Z0-9_]+)\\s*(.*)$/);
-        if (!m) continue;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
 
-        const level = Number(m[1]);
-        const xref = m[2] || "";
-        const tag = m[3];
-        const rest = (m[4] || "").trim();
+    // GEDCOM formats:
+    // 0 @I1@ INDI
+    // 1 NAME John /Doe/
+    // 0 @F1@ FAM
+    const m = line.match(/^(\d+)\s+(@[^@]+@)?\s*([A-Z0-9_]+)\s*(.*)$/);
+    if (!m) continue;
 
-        if (level === 0 && rest === "INDI") {
-          commit();
-          currentType = "INDI";
-          current = {
-            id: xref,
-            name: "",
-            sex: "",
-            birt: { date: "", place: "" },
-            deat: { date: "", place: "" },
-            famc: [],
-            fams: [],
-          };
-          continue;
-        }
-        if (level === 0 && rest === "FAM") {
-          commit();
-          currentType = "FAM";
-          current = {
-            id: xref,
-            husb: "",
-            wife: "",
-            chil: [],
-            marr: { date: "", place: "" },
-          };
-          continue;
-        }
-        if (level === 0 && tag === "TRLR") {
-          commit();
-          break;
-        }
+    const level = Number(m[1]);
+    const xref = m[2] || "";
+    const tag = m[3];
+    const rest = (m[4] || "").trim();
 
-        if (!current) continue;
-
-        if (currentType === "INDI") {
-          if (tag === "NAME") current.name = rest.replace(/\\//g, "").trim();
-          else if (tag === "SEX") current.sex = rest;
-          else if (tag === "FAMC") current.famc.push(rest);
-          else if (tag === "FAMS") current.fams.push(rest);
-          else if (tag === "BIRT") { current.__inBIRT = true; current.__inDEAT = false; }
-          else if (tag === "DEAT") { current.__inDEAT = true; current.__inBIRT = false; }
-          else if (tag === "DATE") {
-            if (current.__inBIRT) current.birt.date = rest;
-            if (current.__inDEAT) current.deat.date = rest;
-          } else if (tag === "PLAC") {
-            if (current.__inBIRT) current.birt.place = rest;
-            if (current.__inDEAT) current.deat.place = rest;
-          }
-        }
-
-        if (currentType === "FAM") {
-          if (tag === "HUSB") current.husb = rest;
-          else if (tag === "WIFE") current.wife = rest;
-          else if (tag === "CHIL") current.chil.push(rest);
-          else if (tag === "MARR") current.__inMARR = true;
-          else if (tag === "DATE" && current.__inMARR) current.marr.date = rest;
-          else if (tag === "PLAC" && current.__inMARR) current.marr.place = rest;
-        }
-      }
+    // --- FIX: INDI/FAM appear in TAG, not REST ---
+    if (level === 0 && tag === "INDI") {
       commit();
-
-      const surnames = new Set();
-      for (const p of people) {
-        const parts = (p.name || "").split(" ").filter(Boolean);
-        if (parts.length) surnames.add(parts[parts.length - 1].toLowerCase());
-      }
-
-      return {
-        title: "Interactive Family Tree",
-        people,
-        families,
-        stats: { people: people.length, families: families.length, surnames: surnames.size }
+      currentType = "INDI";
+      current = {
+        id: xref,
+        name: "",
+        sex: "",
+        birt: { date: "", place: "" },
+        deat: { date: "", place: "" },
+        famc: [],
+        fams: [],
+        __inBIRT: false,
+        __inDEAT: false,
       };
+      continue;
     }
 
-    function setStepDone(stepEl, done) {
-      stepEl.classList.toggle("done", !!done);
+    if (level === 0 && tag === "FAM") {
+      commit();
+      currentType = "FAM";
+      current = {
+        id: xref,
+        husb: "",
+        wife: "",
+        chil: [],
+        marr: { date: "", place: "" },
+        __inMARR: false,
+      };
+      continue;
     }
 
-    function setLoadedTree(tree, sourceLabel) {
-      loadedTree = tree;
-
-      treeSourcePill.textContent =
-        sourceLabel === "shared" ? "Loaded: Shared (Cloud)"
-        : sourceLabel === "local" ? "Loaded: My Saved (Device)"
-        : sourceLabel === "preview" ? "Loaded: Preview"
-        : "Not loaded";
-
-      statPeople.textContent = tree?.stats?.people ?? "—";
-      statFamilies.textContent = tree?.stats?.families ?? "—";
-      statSurnames.textContent = tree?.stats?.surnames ?? "—";
-
-      const hasTree = !!tree;
-      btnExportJson.disabled = !hasTree;
-      btnExportCsv.disabled = !hasTree;
-      btnClearLoaded.disabled = !hasTree;
+    if (level === 0 && tag === "TRLR") {
+      commit();
+      break;
     }
 
-    function downloadFile(filename, content, mime = "application/json") {
-      const blob = new Blob([content], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
+    if (!current) continue;
 
-    function toCsv(tree) {
-      const header = ["id","name","sex","birt_date","birt_place","deat_date","deat_place"];
-      const rows = [header];
+    if (currentType === "INDI") {
+      if (tag === "NAME") current.name = rest.replace(/\//g, "").trim();
+      else if (tag === "SEX") current.sex = rest;
+      else if (tag === "FAMC") current.famc.push(rest);
+      else if (tag === "FAMS") current.fams.push(rest);
 
-      for (const p of tree.people || []) {
-        rows.push([
-          p.id || "",
-          (p.name || "").replaceAll('"', '""'),
-          p.sex || "",
-          p.birt?.date || "",
-          (p.birt?.place || "").replaceAll('"', '""'),
-          p.deat?.date || "",
-          (p.deat?.place || "").replaceAll('"', '""'),
-        ]);
+      else if (tag === "BIRT") { current.__inBIRT = true; current.__inDEAT = false; }
+      else if (tag === "DEAT") { current.__inDEAT = true; current.__inBIRT = false; }
+
+      else if (tag === "DATE") {
+        if (current.__inBIRT) current.birt.date = rest;
+        if (current.__inDEAT) current.deat.date = rest;
       }
-      return rows.map(r => r.map(v => `"${String(v)}"`).join(",")).join("\\n");
+      else if (tag === "PLAC") {
+        if (current.__inBIRT) current.birt.place = rest;
+        if (current.__inDEAT) current.deat.place = rest;
+      }
     }
 
-    async function fetchJson(url, options) {
-      const res = await fetch(url, options);
-      const text = await res.text();
-      let json = null;
-      try { json = text ? JSON.parse(text) : null; } catch {}
-      if (!res.ok) {
-        const msg = json?.error || json?.message || text || `Request failed (${res.status})`;
-        throw new Error(msg);
-      }
-      return json;
+    if (currentType === "FAM") {
+      if (tag === "HUSB") current.husb = rest;
+      else if (tag === "WIFE") current.wife = rest;
+      else if (tag === "CHIL") current.chil.push(rest);
+
+      else if (tag === "MARR") current.__inMARR = true;
+      else if (tag === "DATE" && current.__inMARR) current.marr.date = rest;
+      else if (tag === "PLAC" && current.__inMARR) current.marr.place = rest;
     }
+  }
+
+  commit();
+
+  const surnames = new Set();
+  for (const p of people) {
+    const parts = (p.name || "").split(" ").filter(Boolean);
+    if (parts.length) surnames.add(parts[parts.length - 1].toLowerCase());
+  }
+
+  return {
+    title: "Interactive Family Tree",
+    people,
+    families,
+    stats: {
+      people: people.length,
+      families: families.length,
+      surnames: surnames.size
+    }
+  };
+}
+
 
     // ========= HELP =========
     btnHelp.addEventListener("click", () => helpDialog.showModal());
