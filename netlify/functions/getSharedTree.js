@@ -4,18 +4,16 @@ export default async (req, context) => {
     const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!SUPABASE_URL || !SERVICE_ROLE) {
-      return json(500, { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Netlify env vars." });
+      return json(500, { error: "Server not configured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
     }
 
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/family_tree?id=eq.1&select=id,created_at,data`,
-      {
-        headers: {
-          apikey: SERVICE_ROLE,
-          Authorization: `Bearer ${SERVICE_ROLE}`,
-        },
+    // Read row id=1
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/family_tree?id=eq.1&select=id,created_at,data`, {
+      headers: {
+        "apikey": SERVICE_ROLE,
+        "Authorization": `Bearer ${SERVICE_ROLE}`,
       }
-    );
+    });
 
     if (!res.ok) {
       const text = await res.text();
@@ -25,10 +23,7 @@ export default async (req, context) => {
     const rows = await res.json();
     const row = rows?.[0] || null;
 
-    return json(200, {
-      data: row?.data || null,
-      meta: row ? { id: row.id, created_at: row.created_at } : null,
-    });
+    return json(200, { data: row?.data || null, meta: row ? { id: row.id, created_at: row.created_at } : null });
   } catch (e) {
     return json(500, { error: e.message || "Unexpected error" });
   }
@@ -40,6 +35,8 @@ function json(statusCode, payload) {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-    },
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "GET,OPTIONS",
+    }
   });
 }
